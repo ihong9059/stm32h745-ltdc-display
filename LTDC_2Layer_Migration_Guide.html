@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STM32H745I LTDC 2-Layer 구현 가이드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin: 40px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin: 30px 0 15px 0;
+        }
+
+        h4 {
+            color: #555;
+            font-size: 1.2em;
+            margin: 20px 0 10px 0;
+        }
+
+        .info-box {
+            background: #f0f4ff;
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning-box {
+            background: #fff4e6;
+            border-left: 5px solid #ff9800;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .success-box {
+            background: #e8f5e9;
+            border-left: 5px solid #4caf50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .step-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            border-left: 4px solid #667eea;
+        }
+
+        .code-block .comment {
+            color: #75715e;
+        }
+
+        .code-block .keyword {
+            color: #66d9ef;
+        }
+
+        .code-block .string {
+            color: #e6db74;
+        }
+
+        .code-block .number {
+            color: #ae81ff;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .comparison-table td {
+            padding: 15px;
+            border: 1px solid #ddd;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .comparison-table tr:hover {
+            background: #f0f4ff;
+        }
+
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+
+        li {
+            margin: 10px 0;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #e83e8c;
+            font-size: 0.9em;
+        }
+
+        .visual-diagram {
+            background: #f9f9f9;
+            border: 2px dashed #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            border-radius: 10px;
+        }
+
+        .layer-box {
+            display: inline-block;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .layer-1 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .layer-2 {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .toc {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .toc h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
+
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .toc li {
+            padding: 8px 0;
+        }
+
+        .toc a {
+            color: #764ba2;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .toc a:hover {
+            color: #667eea;
+            text-decoration: underline;
+        }
+
+        footer {
+            background: #2d2d2d;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 5px;
+        }
+
+        .badge-new {
+            background: #4caf50;
+            color: white;
+        }
+
+        .badge-modified {
+            background: #ff9800;
+            color: white;
+        }
+
+        .badge-important {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 STM32H745I-DISCO LTDC 2-Layer 구현 가이드</h1>
+            <p>1-Layer 프로젝트를 2-Layer로 업그레이드하는 완벽 가이드</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">LTDC_Display_2Layers 참조 프로젝트 기반</p>
+        </header>
+
+        <div class="content">
+            <!-- Table of Contents -->
+            <div class="toc">
+                <h3>📋 목차</h3>
+                <ul>
+                    <li><a href="#overview">1. 개요 및 현재 상태</a></li>
+                    <li><a href="#comparison">2. 1-Layer vs 2-Layer 비교</a></li>
+                    <li><a href="#cubemx">3. STM32CubeMX 설정 변경</a></li>
+                    <li><a href="#code-changes">4. 코드 변경사항</a></li>
+                    <li><a href="#image-preparation">5. 이미지 준비</a></li>
+                    <li><a href="#implementation">6. 구현 단계</a></li>
+                    <li><a href="#testing">7. 테스트 및 검증</a></li>
+                    <li><a href="#troubleshooting">8. 문제 해결</a></li>
+                </ul>
+            </div>
+
+            <!-- Section 1: Overview -->
+            <h2 id="overview">1. 개요 및 현재 상태</h2>
+
+            <div class="info-box">
+                <h4>📊 현재 프로젝트 상태</h4>
+                <ul>
+                    <li><strong>보드:</strong> STM32H745I-DISCO</li>
+                    <li><strong>LCD:</strong> RK043FN48H (480×272)</li>
+                    <li><strong>현재 구성:</strong> LTDC 1-Layer (Layer 1만 사용)</li>
+                    <li><strong>픽셀 포맷:</strong> RGB565 (16-bit)</li>
+                    <li><strong>프레임버퍼:</strong> Flash 메모리</li>
+                    <li><strong>해상도:</strong> 480×272 전체 화면</li>
+                </ul>
+            </div>
+
+            <div class="success-box">
+                <h4>🎯 업그레이드 목표</h4>
+                <p><strong>2-Layer 구성으로 전환하여 다음 기능 구현:</strong></p>
+                <ul>
+                    <li>✅ Layer 1 (Background): 배경 이미지 (RGB565 또는 L8 indexed color)</li>
+                    <li>✅ Layer 2 (Foreground): UI 오버레이, 텍스트, 아이콘 등</li>
+                    <li>✅ Alpha Blending: 두 레이어 간 투명도 조절</li>
+                    <li>✅ 동적 레이어 위치 변경 (애니메이션 효과)</li>
+                    <li>✅ 레이어 개별 On/Off 제어</li>
+                </ul>
+            </div>
+
+            <div class="visual-diagram">
+                <h4>LTDC 2-Layer 아키텍처</h4>
+                <div style="margin: 20px 0;">
+                    <div class="layer-box layer-1">Layer 1 (Background)<br>320×240 L8 Indexed</div>
+                    <div style="display: inline-block; margin: 0 20px; font-size: 2em;">+</div>
+                    <div class="layer-box layer-2">Layer 2 (Foreground)<br>320×240 RGB565</div>
+                    <div style="display: block; margin: 20px 0; font-size: 1.5em;">⬇️ Alpha Blending ⬇️</div>
+                    <div style="display: inline-block; padding: 20px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; font-size: 1.2em; font-weight: bold;">
+                        LCD Display 480×272
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Comparison -->
+            <h2 id="comparison">2. 1-Layer vs 2-Layer 비교</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>항목</th>
+                        <th>1-Layer (현재)</th>
+                        <th>2-Layer (목표)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>레이어 수</strong></td>
+                        <td>1개 (Layer 1)</td>
+                        <td>2개 (Layer 1 + Layer 2)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>해상도</strong></td>
+                        <td>480×272 (전체 화면)</td>
+                        <td>Layer 1: 320×240<br>Layer 2: 320×240<br>(위치 이동 가능)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>픽셀 포맷</strong></td>
+                        <td>RGB565</td>
+                        <td>Layer 1: L8 (indexed)<br>Layer 2: RGB565</td>
+                    </tr>
+                    <tr>
+                        <td><strong>프레임버퍼</strong></td>
+                        <td>Flash (읽기 전용)</td>
+                        <td>Flash (읽기 전용)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Alpha Blending</strong></td>
+                        <td>미사용</td>
+                        <td>사용 (Layer 2 투명도 조절)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CLUT</strong></td>
+                        <td>미사용</td>
+                        <td>Layer 1에서 256 색상 CLUT 사용</td>
+                    </tr>
+                    <tr>
+                        <td><strong>메모리 사용량</strong></td>
+                        <td>480×272×2 = 261,120 bytes</td>
+                        <td>Layer 1: 320×240×1 = 76,800 bytes<br>Layer 2: 320×240×2 = 153,600 bytes<br>CLUT: 256×4 = 1,024 bytes<br>Total: 231,424 bytes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>유연성</strong></td>
+                        <td>정적 전체 화면</td>
+                        <td>동적 레이어 위치, 투명도 조절</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-box">
+                <h4>💡 2-Layer의 장점</h4>
+                <ul>
+                    <li><strong>메모리 절약:</strong> L8 indexed color 사용으로 배경 이미지 메모리 50% 절감</li>
+                    <li><strong>UI 오버레이:</strong> 배경을 유지하면서 UI 요소만 업데이트 가능</li>
+                    <li><strong>애니메이션:</strong> 레이어 위치 변경으로 부드러운 애니메이션 구현</li>
+                    <li><strong>투명도 제어:</strong> Alpha 값 조절로 Fade In/Out 효과</li>
+                    <li><strong>독립적 제어:</strong> 각 레이어 개별적으로 On/Off 가능</li>
+                </ul>
+            </div>
+
+            <!-- Section 3: CubeMX Settings -->
+            <h2 id="cubemx">3. STM32CubeMX 설정 변경</h2>
+
+            <div class="warning-box">
+                <h4>⚠️ 중요 주의사항</h4>
+                <p>STM32CubeMX로 .ioc 파일을 수정하면 일부 코드가 덮어씌워질 수 있습니다. 다음 파일을 백업하세요:</p>
+                <ul>
+                    <li><code>CM7/Core/Src/main.c</code> - LED 디버깅 코드, MPU/Cache 설정</li>
+                    <li><code>CM7/Core/Src/gpio.c</code> - PD7 (LCD_DISP) 설정</li>
+                    <li><code>CM7/Core/Src/ltdc_app.c</code> - 커스텀 LCD 설정 함수</li>
+                </ul>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">1</span>CubeMX 프로젝트 열기</h3>
+                <ol>
+                    <li>STM32CubeMX 실행</li>
+                    <li><code>/Users/maeg/todo/stm32/ltdc/ltdc.ioc</code> 파일 열기</li>
+                    <li>프로젝트 로드 완료 대기</li>
+                </ol>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">2</span>LTDC 핀 설정 확인</h3>
+                <p><strong>Pinout & Configuration → Multimedia → LTDC</strong></p>
+                <div class="info-box">
+                    <h4>확인 사항:</h4>
+                    <ul>
+                        <li>LTDC 활성화 상태 확인</li>
+                        <li>모든 핀 자동 할당 확인 (R0-R7, G0-G7, B0-B7, CLK, HSYNC, VSYNC, DE)</li>
+                        <li><strong>Display Enable Pin (PD7):</strong> GPIO Output으로 별도 설정 필요</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">3</span>LTDC 파라미터 설정</h3>
+                <p><strong>Configuration → LTDC → Parameter Settings</strong></p>
+
+                <h4>Display Timing Parameters (RK043FN48H LCD)</h4>
+                <div class="code-block">
+Horizontal Synchronization Width: <span class="number">41</span>
+Vertical Synchronization Height: <span class="number">10</span>
+Accumulated Horizontal Back Porch: <span class="number">54</span>  <span class="comment">// HSYNC + HBP (41 + 13)</span>
+Accumulated Vertical Back Porch: <span class="number">12</span>   <span class="comment">// VSYNC + VBP (10 + 2)</span>
+Accumulated Active Width: <span class="number">534</span>          <span class="comment">// HSYNC + HBP + WIDTH (41 + 13 + 480)</span>
+Accumulated Active Height: <span class="number">284</span>         <span class="comment">// VSYNC + VBP + HEIGHT (10 + 2 + 272)</span>
+Total Width: <span class="number">566</span>                      <span class="comment">// + HFP (534 + 32)</span>
+Total Height: <span class="number">286</span>                     <span class="comment">// + VFP (284 + 2)</span>
+                </div>
+
+                <h4>Polarity Settings</h4>
+                <div class="code-block">
+Horizontal Sync Polarity: <span class="keyword">Active Low</span>
+Vertical Sync Polarity: <span class="keyword">Active Low</span>
+Data Enable Polarity: <span class="keyword">Active Low</span>
+Pixel Clock Polarity: <span class="keyword">Input Pixel Clock</span>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">4</span>Layer 1 (Background) 설정</h3>
+                <p><strong>Configuration → LTDC → Layer 1</strong></p>
+
+                <span class="badge badge-new">NEW CONFIG</span>
+                <div class="code-block">
+<span class="comment">/* Window Settings */</span>
+Window Horizontal Start: <span class="number">0</span>
+Window Horizontal Stop: <span class="number">320</span>
+Window Vertical Start: <span class="number">0</span>
+Window Vertical Stop: <span class="number">240</span>
+
+<span class="comment">/* Pixel Format */</span>
+Pixel Format: <span class="keyword">L8</span>  <span class="comment">// 8-bit indexed color (256 colors)</span>
+
+<span class="comment">/* Frame Buffer */</span>
+Frame Buffer Start Address: <span class="number">0x00000000</span>  <span class="comment">// 코드에서 설정</span>
+Frame Buffer Line Length: <span class="number">320</span>
+Frame Buffer Pitch: <span class="number">320</span>
+Frame Buffer Line Number: <span class="number">240</span>
+
+<span class="comment">/* Alpha & Blending */</span>
+Alpha: <span class="number">255</span>  <span class="comment">// Fully opaque</span>
+Blending Factor 1: <span class="keyword">Pixel Alpha x Constant Alpha</span>
+Blending Factor 2: <span class="keyword">Pixel Alpha x Constant Alpha</span>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">5</span>Layer 2 (Foreground) 설정 <span class="badge badge-new">NEW</span></h3>
+                <p><strong>Configuration → LTDC → Layer 2 (Enable)</strong></p>
+
+                <div class="warning-box">
+                    <strong>⚠️ Layer 2를 활성화해야 합니다!</strong> 기본적으로 비활성화되어 있습니다.
+                </div>
+
+                <div class="code-block">
+<span class="comment">/* Window Settings */</span>
+Window Horizontal Start: <span class="number">160</span>  <span class="comment">// 화면 오른쪽으로 이동</span>
+Window Horizontal Stop: <span class="number">480</span>
+Window Vertical Start: <span class="number">32</span>
+Window Vertical Stop: <span class="number">272</span>
+
+<span class="comment">/* Pixel Format */</span>
+Pixel Format: <span class="keyword">RGB565</span>  <span class="comment">// 16-bit direct color</span>
+
+<span class="comment">/* Frame Buffer */</span>
+Frame Buffer Start Address: <span class="number">0x00000000</span>  <span class="comment">// 코드에서 설정</span>
+Frame Buffer Line Length: <span class="number">320</span>
+Frame Buffer Pitch: <span class="number">320</span>
+Frame Buffer Line Number: <span class="number">240</span>
+
+<span class="comment">/* Alpha & Blending */</span>
+Alpha: <span class="number">200</span>  <span class="comment">// 약 78% 불투명 (블렌딩 효과)</span>
+Blending Factor 1: <span class="keyword">Pixel Alpha x Constant Alpha</span>
+Blending Factor 2: <span class="keyword">Pixel Alpha x Constant Alpha</span>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">6</span>Clock 설정 확인</h3>
+                <p><strong>Clock Configuration</strong></p>
+
+                <div class="info-box">
+                    <h4>PLL3 (LTDC Clock) 설정:</h4>
+                    <div class="code-block">
+PLL3 Source: <span class="keyword">HSE</span> (25 MHz)
+PLL3M: <span class="number">5</span>      <span class="comment">// VCO Input = 25/5 = 5 MHz</span>
+PLL3N: <span class="number">160</span>    <span class="comment">// VCO Output = 5 × 160 = 800 MHz</span>
+PLL3R: <span class="number">83</span>     <span class="comment">// LTDC Clock = 800/83 = 9.63 MHz</span>
+                    </div>
+                    <p><strong>결과:</strong> LTDC Clock = 9.63 MHz (RK043FN48H 요구사항 충족)</p>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">7</span>GPIO 설정 (PD7 - LCD_DISP)</h3>
+                <p><strong>Pinout & Configuration → System Core → GPIO</strong></p>
+
+                <div class="warning-box">
+                    <strong>⚠️ 필수:</strong> LCD 백라이트 제어를 위해 PD7을 GPIO Output으로 설정해야 합니다.
+                </div>
+
+                <div class="code-block">
+Pin: <span class="keyword">PD7</span>
+Mode: <span class="keyword">GPIO_Output</span>
+Label: <span class="string">"LCD_DISP"</span>
+Initial Output Level: <span class="keyword">High</span>  <span class="comment">// LCD 켜짐 상태</span>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">8</span>코드 생성</h3>
+                <ol>
+                    <li><strong>Project Manager → Project</strong>에서 설정 확인</li>
+                    <li><strong>Toolchain/IDE:</strong> STM32CubeIDE</li>
+                    <li><strong>Generate Code</strong> 버튼 클릭</li>
+                    <li>코드 생성 완료 대기</li>
+                </ol>
+
+                <div class="warning-box">
+                    <strong>⚠️ 코드 재생성 후 복원 필요 항목:</strong>
+                    <ul>
+                        <li>main.c의 LED 디버깅 코드</li>
+                        <li>MPU_Config() 및 CPU_CACHE_Enable() 호출</li>
+                        <li>ltdc_app.c의 커스텀 LCD 설정</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Section 4: Code Changes -->
+            <h2 id="code-changes">4. 코드 변경사항</h2>
+
+            <h3>4.1 ltdc_app.c 수정 <span class="badge badge-modified">MODIFIED</span></h3>
+
+            <p>현재 1-Layer 설정을 2-Layer로 변경합니다.</p>
+
+            <div class="code-block">
+<span class="comment">/**
+  ******************************************************************************
+  * @file    ltdc_app.c
+  * @brief   LTDC Application Code - 2 Layer Display
+  ******************************************************************************
+  */</span>
+
+<span class="comment">/* Includes ------------------------------------------------------------------*/</span>
+<span class="keyword">#include</span> <span class="string">"main.h"</span>
+<span class="keyword">#include</span> <span class="string">"L8_320x240.h"</span>      <span class="comment">// Layer 1: Indexed color image</span>
+<span class="keyword">#include</span> <span class="string">"RGB565_320x240.h"</span>  <span class="comment">// Layer 2: RGB565 image</span>
+
+<span class="comment">/* External variables --------------------------------------------------------*/</span>
+<span class="keyword">extern</span> LTDC_HandleTypeDef hltdc;
+
+<span class="comment">/* Reload flag for vertical blanking sync */</span>
+__IO <span class="keyword">uint32_t</span> ReloadFlag = <span class="number">0</span>;
+
+<span class="comment">/* LCD RK043FN48H Timing defines */</span>
+<span class="keyword">#define</span> RK043FN48H_HSYNC    ((<span class="keyword">uint16_t</span>)<span class="number">41</span>)
+<span class="keyword">#define</span> RK043FN48H_HBP      ((<span class="keyword">uint16_t</span>)<span class="number">13</span>)
+<span class="keyword">#define</span> RK043FN48H_HFP      ((<span class="keyword">uint16_t</span>)<span class="number">32</span>)
+<span class="keyword">#define</span> RK043FN48H_VSYNC    ((<span class="keyword">uint16_t</span>)<span class="number">10</span>)
+<span class="keyword">#define</span> RK043FN48H_VBP      ((<span class="keyword">uint16_t</span>)<span class="number">2</span>)
+<span class="keyword">#define</span> RK043FN48H_VFP      ((<span class="keyword">uint16_t</span>)<span class="number">2</span>)
+<span class="keyword">#define</span> RK043FN48H_WIDTH    ((<span class="keyword">uint16_t</span>)<span class="number">480</span>)
+<span class="keyword">#define</span> RK043FN48H_HEIGHT   ((<span class="keyword">uint16_t</span>)<span class="number">272</span>)
+
+<span class="comment">/* Private function prototypes -----------------------------------------------*/</span>
+<span class="keyword">static void</span> LCD_Config_2Layers(<span class="keyword">void</span>);
+
+<span class="comment">/**
+  * @brief  Initialize LCD with 2 layers
+  * @retval None
+  */</span>
+<span class="keyword">void</span> LTDC_App_Init(<span class="keyword">void</span>)
+{
+  <span class="comment">/* Small delay to ensure LCD is ready */</span>
+  HAL_Delay(<span class="number">10</span>);
+
+  <span class="comment">/* Configure 2 layers */</span>
+  LCD_Config_2Layers();
+
+  <span class="comment">/* Load CLUT for Layer 1 (indexed color) */</span>
+  HAL_LTDC_ConfigCLUT(&hltdc, (<span class="keyword">uint32_t</span> *)L8_320x240_CLUT, <span class="number">256</span>, <span class="number">0</span>);
+
+  <span class="comment">/* Enable CLUT for Layer 1 */</span>
+  HAL_LTDC_EnableCLUT(&hltdc, <span class="number">0</span>);
+
+  printf(<span class="string">"LTDC 2-Layer initialized\r\n"</span>);
+}
+
+<span class="comment">/**
+  * @brief  Configure LTDC with 2 layers
+  * @retval None
+  */</span>
+<span class="keyword">static void</span> LCD_Config_2Layers(<span class="keyword">void</span>)
+{
+  LTDC_LayerCfgTypeDef pLayerCfg1;
+  LTDC_LayerCfgTypeDef pLayerCfg2;
+
+  <span class="comment">/*##-1- Layer 1 Configuration (Background - L8 Indexed Color) ##############*/</span>
+
+  pLayerCfg1.WindowX0 = <span class="number">0</span>;
+  pLayerCfg1.WindowX1 = <span class="number">320</span>;
+  pLayerCfg1.WindowY0 = <span class="number">0</span>;
+  pLayerCfg1.WindowY1 = <span class="number">240</span>;
+
+  <span class="comment">/* Pixel Format: L8 (8-bit indexed color) */</span>
+  pLayerCfg1.PixelFormat = LTDC_PIXEL_FORMAT_L8;
+
+  <span class="comment">/* Frame buffer address in Flash */</span>
+  pLayerCfg1.FBStartAdress = (<span class="keyword">uint32_t</span>)&L8_320x240;
+
+  <span class="comment">/* Alpha: fully opaque */</span>
+  pLayerCfg1.Alpha = <span class="number">255</span>;
+  pLayerCfg1.Alpha0 = <span class="number">0</span>;
+
+  <span class="comment">/* Default background color */</span>
+  pLayerCfg1.Backcolor.Blue = <span class="number">0</span>;
+  pLayerCfg1.Backcolor.Green = <span class="number">0</span>;
+  pLayerCfg1.Backcolor.Red = <span class="number">0</span>;
+
+  <span class="comment">/* Blending factors */</span>
+  pLayerCfg1.BlendingFactor1 = LTDC_BLENDING_FACTOR1_PAxCA;
+  pLayerCfg1.BlendingFactor2 = LTDC_BLENDING_FACTOR2_PAxCA;
+
+  <span class="comment">/* Image dimensions */</span>
+  pLayerCfg1.ImageWidth = <span class="number">320</span>;
+  pLayerCfg1.ImageHeight = <span class="number">240</span>;
+
+  <span class="comment">/*##-2- Layer 2 Configuration (Foreground - RGB565) ########################*/</span>
+
+  pLayerCfg2.WindowX0 = <span class="number">160</span>;  <span class="comment">// Offset to the right</span>
+  pLayerCfg2.WindowX1 = <span class="number">480</span>;
+  pLayerCfg2.WindowY0 = <span class="number">32</span>;   <span class="comment">// Offset downward</span>
+  pLayerCfg2.WindowY1 = <span class="number">272</span>;
+
+  <span class="comment">/* Pixel Format: RGB565 */</span>
+  pLayerCfg2.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
+
+  <span class="comment">/* Frame buffer address in Flash */</span>
+  pLayerCfg2.FBStartAdress = (<span class="keyword">uint32_t</span>)&RGB565_320x240;
+
+  <span class="comment">/* Alpha: 78% opaque for blending effect */</span>
+  pLayerCfg2.Alpha = <span class="number">200</span>;
+  pLayerCfg2.Alpha0 = <span class="number">0</span>;
+
+  <span class="comment">/* Default background color */</span>
+  pLayerCfg2.Backcolor.Blue = <span class="number">0</span>;
+  pLayerCfg2.Backcolor.Green = <span class="number">0</span>;
+  pLayerCfg2.Backcolor.Red = <span class="number">0</span>;
+
+  <span class="comment">/* Blending factors */</span>
+  pLayerCfg2.BlendingFactor1 = LTDC_BLENDING_FACTOR1_PAxCA;
+  pLayerCfg2.BlendingFactor2 = LTDC_BLENDING_FACTOR2_PAxCA;
+
+  <span class="comment">/* Image dimensions */</span>
+  pLayerCfg2.ImageWidth = <span class="number">320</span>;
+  pLayerCfg2.ImageHeight = <span class="number">240</span>;
+
+  <span class="comment">/*##-3- Configure Layers ####################################################*/</span>
+
+  <span class="keyword">if</span>(HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg1, <span class="number">0</span>) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  <span class="keyword">if</span>(HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg2, <span class="number">1</span>) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+<span class="comment">/**
+  * @brief  LTDC Reload Event Callback
+  * @param  hltdc: LTDC handle
+  * @retval None
+  */</span>
+<span class="keyword">void</span> HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc)
+{
+  ReloadFlag = <span class="number">1</span>;
+}
+
+<span class="comment">/**
+  * @brief  Update Layer 2 position (for animation)
+  * @param  x0: X start position
+  * @param  y0: Y start position
+  * @retval None
+  */</span>
+<span class="keyword">void</span> LTDC_SetLayer2Position(<span class="keyword">uint32_t</span> x0, <span class="keyword">uint32_t</span> y0)
+{
+  <span class="comment">/* Set new position without immediate reload */</span>
+  HAL_LTDC_SetWindowPosition_NoReload(&hltdc, x0, y0, <span class="number">1</span>);
+
+  <span class="comment">/* Trigger reload on vertical blanking */</span>
+  ReloadFlag = <span class="number">0</span>;
+  HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+
+  <span class="comment">/* Wait for reload to complete */</span>
+  <span class="keyword">while</span>(ReloadFlag == <span class="number">0</span>);
+}
+
+<span class="comment">/**
+  * @brief  Set Layer 2 alpha (transparency)
+  * @param  alpha: Alpha value (0-255, 0=transparent, 255=opaque)
+  * @retval None
+  */</span>
+<span class="keyword">void</span> LTDC_SetLayer2Alpha(<span class="keyword">uint8_t</span> alpha)
+{
+  HAL_LTDC_SetAlpha(&hltdc, alpha, <span class="number">1</span>);
+}
+            </div>
+
+            <h3>4.2 ltdc_app.h 헤더 파일 <span class="badge badge-new">NEW</span></h3>
+
+            <div class="code-block">
+<span class="comment">/**
+  ******************************************************************************
+  * @file    ltdc_app.h
+  * @brief   LTDC Application Header
+  ******************************************************************************
+  */</span>
+
+<span class="keyword">#ifndef</span> __LTDC_APP_H
+<span class="keyword">#define</span> __LTDC_APP_H
+
+<span class="keyword">#ifdef</span> __cplusplus
+<span class="keyword">extern</span> <span class="string">"C"</span> {
+<span class="keyword">#endif</span>
+
+<span class="comment">/* Includes ------------------------------------------------------------------*/</span>
+<span class="keyword">#include</span> <span class="string">"stm32h7xx_hal.h"</span>
+
+<span class="comment">/* Public function prototypes ------------------------------------------------*/</span>
+<span class="keyword">void</span> LTDC_App_Init(<span class="keyword">void</span>);
+<span class="keyword">void</span> LTDC_SetLayer2Position(<span class="keyword">uint32_t</span> x0, <span class="keyword">uint32_t</span> y0);
+<span class="keyword">void</span> LTDC_SetLayer2Alpha(<span class="keyword">uint8_t</span> alpha);
+
+<span class="keyword">#ifdef</span> __cplusplus
+}
+<span class="keyword">#endif</span>
+
+<span class="keyword">#endif</span> <span class="comment">/* __LTDC_APP_H */</span>
+            </div>
+
+            <h3>4.3 main.c 애니메이션 예제 <span class="badge badge-new">NEW</span></h3>
+
+            <p>메인 루프에서 Layer 2 위치를 동적으로 변경하는 애니메이션 예제:</p>
+
+            <div class="code-block">
+<span class="comment">/* USER CODE BEGIN WHILE */</span>
+<span class="keyword">uint32_t</span> Xpos1 = <span class="number">0</span>;
+<span class="keyword">uint32_t</span> Xpos2 = <span class="number">160</span>;
+<span class="keyword">uint32_t</span> Ypos1 = <span class="number">0</span>;
+<span class="keyword">uint32_t</span> Ypos2 = <span class="number">32</span>;
+<span class="keyword">uint32_t</span> index = <span class="number">0</span>;
+
+<span class="keyword">while</span> (<span class="number">1</span>)
+{
+  <span class="comment">/* Animation 1: Move layers towards each other */</span>
+  <span class="keyword">for</span> (index = <span class="number">0</span>; index < <span class="number">32</span>; index++)
+  {
+    <span class="comment">/* Calculate new positions */</span>
+    Xpos1 = index * <span class="number">5</span>;
+    Ypos1 = index;
+    Xpos2 = <span class="number">160</span> - index * <span class="number">5</span>;
+    Ypos2 = <span class="number">32</span> - index;
+
+    <span class="comment">/* Update Layer 1 position */</span>
+    HAL_LTDC_SetWindowPosition_NoReload(&hltdc, Xpos1, Ypos1, <span class="number">0</span>);
+
+    <span class="comment">/* Update Layer 2 position */</span>
+    LTDC_SetLayer2Position(Xpos2, Ypos2);
+
+    HAL_Delay(<span class="number">50</span>);  <span class="comment">// Smooth animation</span>
+  }
+
+  HAL_Delay(<span class="number">500</span>);
+
+  <span class="comment">/* Animation 2: Return to original positions */</span>
+  <span class="keyword">for</span> (index = <span class="number">0</span>; index < <span class="number">32</span>; index++)
+  {
+    Xpos2 = index * <span class="number">5</span>;
+    Ypos2 = index;
+    Xpos1 = <span class="number">160</span> - index * <span class="number">5</span>;
+    Ypos1 = <span class="number">32</span> - index;
+
+    HAL_LTDC_SetWindowPosition_NoReload(&hltdc, Xpos1, Ypos1, <span class="number">0</span>);
+    LTDC_SetLayer2Position(Xpos2, Ypos2);
+
+    HAL_Delay(<span class="number">50</span>);
+  }
+
+  HAL_Delay(<span class="number">500</span>);
+
+  <span class="comment">/* Toggle LED to show loop is running */</span>
+  HAL_GPIO_TogglePin(GPIOI, GPIO_PIN_13);  <span class="comment">// LD6</span>
+  HAL_GPIO_TogglePin(GPIOJ, GPIO_PIN_2);   <span class="comment">// LD7</span>
+  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_3);   <span class="comment">// LD8</span>
+}
+<span class="comment">/* USER CODE END WHILE */</span>
+            </div>
+
+            <!-- Section 5: Image Preparation -->
+            <h2 id="image-preparation">5. 이미지 준비</h2>
+
+            <div class="info-box">
+                <h4>필요한 이미지 파일:</h4>
+                <ol>
+                    <li><strong>Layer 1:</strong> L8_320x240.h (320×240, L8 indexed color)</li>
+                    <li><strong>Layer 2:</strong> RGB565_320x240.h (320×240, RGB565)</li>
+                    <li><strong>CLUT:</strong> L8_320x240_CLUT (256 colors palette)</li>
+                </ol>
+            </div>
+
+            <h3>5.1 참조 이미지 복사</h3>
+
+            <p>가장 간단한 방법은 LTDC_Display_2Layers에서 제공하는 이미지를 그대로 사용하는 것입니다:</p>
+
+            <div class="code-block">
+<span class="comment"># LTDC_Display_2Layers 이미지 파일 복사</span>
+cp /Users/maeg/todo/stm32/LTDC_Display_2Layers/CM7/Inc/L8_320x240.h \
+   /Users/maeg/todo/stm32/ltdc/CM7/Core/Inc/
+
+cp /Users/maeg/todo/stm32/LTDC_Display_2Layers/CM7/Inc/RGB565_320x240.h \
+   /Users/maeg/todo/stm32/ltdc/CM7/Core/Inc/
+            </div>
+
+            <h3>5.2 커스텀 이미지 생성 (선택사항)</h3>
+
+            <div class="step-card">
+                <h4>Option 1: Python + PIL 사용</h4>
+                <div class="code-block">
+<span class="keyword">from</span> PIL <span class="keyword">import</span> Image
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="comment"># Load and resize image</span>
+img = Image.open(<span class="string">'input.png'</span>).convert(<span class="string">'RGB'</span>)
+img = img.resize((<span class="number">320</span>, <span class="number">240</span>), Image.LANCZOS)
+
+<span class="comment"># Convert to RGB565</span>
+<span class="keyword">def</span> rgb888_to_rgb565(r, g, b):
+    <span class="keyword">return</span> ((r & <span class="number">0xF8</span>) << <span class="number">8</span>) | ((g & <span class="number">0xFC</span>) << <span class="number">3</span>) | (b >> <span class="number">3</span>)
+
+pixels = np.array(img)
+rgb565_data = []
+
+<span class="keyword">for</span> y <span class="keyword">in</span> range(<span class="number">240</span>):
+    <span class="keyword">for</span> x <span class="keyword">in</span> range(<span class="number">320</span>):
+        r, g, b = pixels[y, x]
+        rgb565 = rgb888_to_rgb565(r, g, b)
+        rgb565_data.append(rgb565)
+
+<span class="comment"># Generate C header file</span>
+<span class="keyword">with</span> open(<span class="string">'RGB565_320x240.h'</span>, <span class="string">'w'</span>) <span class="keyword">as</span> f:
+    f.write(<span class="string">'const uint16_t RGB565_320x240[] = {\n'</span>)
+    <span class="keyword">for</span> i, val <span class="keyword">in</span> enumerate(rgb565_data):
+        <span class="keyword">if</span> i % <span class="number">16</span> == <span class="number">0</span>:
+            f.write(<span class="string">'  '</span>)
+        f.write(<span class="string">f'0x{val:04X}'</span>)
+        <span class="keyword">if</span> i < len(rgb565_data) - <span class="number">1</span>:
+            f.write(<span class="string">','</span>)
+        <span class="keyword">if</span> (i + <span class="number">1</span>) % <span class="number">16</span> == <span class="number">0</span>:
+            f.write(<span class="string">'\n'</span>)
+    f.write(<span class="string">'\n};\n'</span>)
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h4>Option 2: ImageMagick + 수동 변환</h4>
+                <div class="code-block">
+<span class="comment"># 1. 이미지 리사이즈 및 BMP 변환</span>
+convert input.png -resize 320x240! -depth 16 output_rgb565.bmp
+
+<span class="comment"># 2. Hex 덤프 생성</span>
+xxd -i output_rgb565.bmp > rgb565_raw.txt
+
+<span class="comment"># 3. 헤더 부분 제거하고 C 배열로 변환</span>
+<span class="comment"># (BMP 헤더 54 bytes 제거 필요)</span>
+                </div>
+            </div>
+
+            <h3>5.3 L8 Indexed Color 이미지 생성</h3>
+
+            <p>L8 포맷은 256 색상 팔레트를 사용하여 메모리를 절약합니다:</p>
+
+            <div class="code-block">
+<span class="keyword">from</span> PIL <span class="keyword">import</span> Image
+
+<span class="comment"># Convert image to 256 colors (indexed)</span>
+img = Image.open(<span class="string">'input.png'</span>).convert(<span class="string">'RGB'</span>)
+img = img.resize((<span class="number">320</span>, <span class="number">240</span>), Image.LANCZOS)
+img_indexed = img.convert(<span class="string">'P'</span>, palette=Image.ADAPTIVE, colors=<span class="number">256</span>)
+
+<span class="comment"># Get palette (CLUT)</span>
+palette = img_indexed.getpalette()
+clut = []
+<span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">256</span>):
+    r = palette[i*<span class="number">3</span>]
+    g = palette[i*<span class="number">3</span>+<span class="number">1</span>]
+    b = palette[i*<span class="number">3</span>+<span class="number">2</span>]
+    <span class="comment"># RGB888 format for CLUT</span>
+    rgb888 = (r << <span class="number">16</span>) | (g << <span class="number">8</span>) | b
+    clut.append(rgb888)
+
+<span class="comment"># Get pixel data (indices)</span>
+pixels = list(img_indexed.getdata())
+
+<span class="comment"># Generate C header with CLUT and pixel data</span>
+<span class="keyword">with</span> open(<span class="string">'L8_320x240.h'</span>, <span class="string">'w'</span>) <span class="keyword">as</span> f:
+    <span class="comment"># Write CLUT</span>
+    f.write(<span class="string">'const uint32_t L8_320x240_CLUT[256] = {\n'</span>)
+    <span class="keyword">for</span> i, val <span class="keyword">in</span> enumerate(clut):
+        <span class="keyword">if</span> i % <span class="number">8</span> == <span class="number">0</span>:
+            f.write(<span class="string">'  '</span>)
+        f.write(<span class="string">f'0x{val:06X}'</span>)
+        <span class="keyword">if</span> i < <span class="number">255</span>:
+            f.write(<span class="string">','</span>)
+        <span class="keyword">if</span> (i + <span class="number">1</span>) % <span class="number">8</span> == <span class="number">0</span>:
+            f.write(<span class="string">'\n'</span>)
+    f.write(<span class="string">'\n};\n\n'</span>)
+
+    <span class="comment"># Write pixel data</span>
+    f.write(<span class="string">'const uint8_t L8_320x240[] = {\n'</span>)
+    <span class="keyword">for</span> i, val <span class="keyword">in</span> enumerate(pixels):
+        <span class="keyword">if</span> i % <span class="number">16</span> == <span class="number">0</span>:
+            f.write(<span class="string">'  '</span>)
+        f.write(<span class="string">f'0x{val:02X}'</span>)
+        <span class="keyword">if</span> i < len(pixels) - <span class="number">1</span>:
+            f.write(<span class="string">','</span>)
+        <span class="keyword">if</span> (i + <span class="number">1</span>) % <span class="number">16</span> == <span class="number">0</span>:
+            f.write(<span class="string">'\n'</span>)
+    f.write(<span class="string">'\n};\n'</span>)
+            </div>
+
+            <!-- Section 6: Implementation Steps -->
+            <h2 id="implementation">6. 구현 단계별 가이드</h2>
+
+            <div class="step-card">
+                <h3><span class="step-number">1</span>백업 생성</h3>
+                <div class="code-block">
+cd /Users/maeg/todo/stm32/ltdc
+cp -r CM7/Core/Src CM7/Core/Src.backup
+cp -r CM7/Core/Inc CM7/Core/Inc.backup
+cp ltdc.ioc ltdc.ioc.backup
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">2</span>이미지 파일 추가</h3>
+                <div class="code-block">
+<span class="comment"># 참조 프로젝트에서 이미지 복사</span>
+cp /Users/maeg/todo/stm32/LTDC_Display_2Layers/CM7/Inc/L8_320x240.h \
+   /Users/maeg/todo/stm32/ltdc/CM7/Core/Inc/
+
+cp /Users/maeg/todo/stm32/LTDC_Display_2Layers/CM7/Inc/RGB565_320x240.h \
+   /Users/maeg/todo/stm32/ltdc/CM7/Core/Inc/
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">3</span>CubeMX 설정 업데이트</h3>
+                <p>위의 "3. STM32CubeMX 설정 변경" 섹션을 따라 진행하세요.</p>
+                <ul>
+                    <li>Layer 1: L8 포맷으로 변경 (320×240)</li>
+                    <li>Layer 2: 활성화 및 설정 (RGB565, 320×240)</li>
+                    <li>코드 재생성</li>
+                </ul>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">4</span>ltdc_app.c 수정</h3>
+                <p><code>CM7/Core/Src/ltdc_app.c</code> 파일을 위의 "4.1 ltdc_app.c 수정" 섹션의 코드로 교체하세요.</p>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">5</span>ltdc_app.h 생성</h3>
+                <p><code>CM7/Core/Inc/ltdc_app.h</code> 파일을 위의 "4.2 ltdc_app.h" 섹션의 코드로 생성하세요.</p>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">6</span>main.c 업데이트</h3>
+                <p>필요시 애니메이션 코드를 main.c의 while 루프에 추가하세요 (위의 "4.3 main.c 애니메이션 예제" 참조).</p>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">7</span>빌드</h3>
+                <div class="code-block">
+cd /Users/maeg/todo/stm32/ltdc/CM7/Debug
+make clean
+make all -j8
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3><span class="step-number">8</span>플래시 및 테스트</h3>
+                <div class="code-block">
+export PROG="/Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.macos64_2.2.200.202503041107/tools/bin/STM32_Programmer_CLI"
+"$PROG" -c port=SWD -w /Users/maeg/todo/stm32/ltdc/CM7/Debug/ltdc_CM7.elf -v -rst
+                </div>
+            </div>
+
+            <!-- Section 7: Testing -->
+            <h2 id="testing">7. 테스트 및 검증</h2>
+
+            <h3>7.1 기본 동작 확인</h3>
+
+            <div class="success-box">
+                <h4>✅ 확인 사항:</h4>
+                <ul>
+                    <li><strong>LCD 켜짐:</strong> 백라이트가 정상적으로 켜져야 함</li>
+                    <li><strong>Layer 1 표시:</strong> 배경 이미지가 왼쪽 상단 (0,0)에서 시작하여 320×240 크기로 표시</li>
+                    <li><strong>Layer 2 표시:</strong> 전경 이미지가 (160,32) 위치에서 시작하여 320×240 크기로 표시</li>
+                    <li><strong>Alpha Blending:</strong> 두 레이어가 겹치는 부분에서 블렌딩 효과 확인</li>
+                    <li><strong>LED 깜빡임:</strong> LD6, LD7, LD8이 1초 간격으로 깜빡임</li>
+                </ul>
+            </div>
+
+            <h3>7.2 시리얼 출력 확인</h3>
+
+            <div class="code-block">
+screen /dev/cu.usbmodem142103 115200
+
+<span class="comment"># 예상 출력:</span>
+STM32H745I-DISCO LTDC Init
+UART3 initialized
+LCD_DISP (PD7) set HIGH
+LTDC 2-Layer initialized
+            </div>
+
+            <h3>7.3 레이어 개별 테스트</h3>
+
+            <p>각 레이어를 개별적으로 On/Off하여 테스트할 수 있습니다:</p>
+
+            <div class="code-block">
+<span class="comment">/* Layer 1만 표시 */</span>
+HAL_LTDC_SetLayerVisible(&hltdc, <span class="number">0</span>, ENABLE);
+HAL_LTDC_SetLayerVisible(&hltdc, <span class="number">1</span>, DISABLE);
+
+<span class="comment">/* Layer 2만 표시 */</span>
+HAL_LTDC_SetLayerVisible(&hltdc, <span class="number">0</span>, DISABLE);
+HAL_LTDC_SetLayerVisible(&hltdc, <span class="number">1</span>, ENABLE);
+
+<span class="comment">/* 모두 표시 */</span>
+HAL_LTDC_SetLayerVisible(&hltdc, <span class="number">0</span>, ENABLE);
+HAL_LTDC_SetLayerVisible(&hltdc, <span class="number">1</span>, ENABLE);
+            </div>
+
+            <h3>7.4 Alpha 블렌딩 테스트</h3>
+
+            <p>Layer 2의 투명도를 동적으로 변경하여 Fade 효과를 테스트할 수 있습니다:</p>
+
+            <div class="code-block">
+<span class="comment">/* Fade Out (Layer 2를 점점 투명하게) */</span>
+<span class="keyword">for</span>(<span class="keyword">uint8_t</span> alpha = <span class="number">255</span>; alpha > <span class="number">0</span>; alpha -= <span class="number">5</span>)
+{
+  LTDC_SetLayer2Alpha(alpha);
+  HAL_Delay(<span class="number">20</span>);
+}
+
+<span class="comment">/* Fade In (Layer 2를 점점 불투명하게) */</span>
+<span class="keyword">for</span>(<span class="keyword">uint8_t</span> alpha = <span class="number">0</span>; alpha < <span class="number">255</span>; alpha += <span class="number">5</span>)
+{
+  LTDC_SetLayer2Alpha(alpha);
+  HAL_Delay(<span class="number">20</span>);
+}
+            </div>
+
+            <h3>7.5 성능 측정</h3>
+
+            <div class="code-block">
+<span class="comment">/* 레이어 위치 업데이트 성능 측정 */</span>
+<span class="keyword">uint32_t</span> start_time = HAL_GetTick();
+
+<span class="keyword">for</span>(<span class="keyword">uint32_t</span> i = <span class="number">0</span>; i < <span class="number">100</span>; i++)
+{
+  LTDC_SetLayer2Position(i, i);
+}
+
+<span class="keyword">uint32_t</span> elapsed = HAL_GetTick() - start_time;
+printf(<span class="string">"100 layer updates: %lu ms\r\n"</span>, elapsed);
+<span class="comment">// 예상: ~100-200ms (1-2ms per update)</span>
+            </div>
+
+            <!-- Section 8: Troubleshooting -->
+            <h2 id="troubleshooting">8. 문제 해결</h2>
+
+            <div class="warning-box">
+                <h4>❌ 문제: LCD에 아무것도 표시되지 않음 (흰색 화면)</h4>
+                <p><strong>원인 및 해결:</strong></p>
+                <ol>
+                    <li><strong>PD7 (LCD_DISP) 미설정:</strong>
+                        <ul>
+                            <li>CubeMX에서 PD7을 GPIO Output으로 설정했는지 확인</li>
+                            <li><code>gpio.c</code>에서 <code>HAL_GPIO_WritePin(GPIOD, GPIO_PIN_7, GPIO_PIN_SET);</code> 호출 확인</li>
+                        </ul>
+                    </li>
+                    <li><strong>LTDC Clock 미설정:</strong>
+                        <ul>
+                            <li>PLL3 설정이 올바른지 확인 (9.63 MHz)</li>
+                            <li><code>ltdc.c</code>에서 <code>__HAL_RCC_LTDC_CLK_ENABLE()</code> 호출 확인</li>
+                        </ul>
+                    </li>
+                    <li><strong>타이밍 파라미터 오류:</strong>
+                        <ul>
+                            <li>CubeMX에서 RK043FN48H 타이밍 값 재확인</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="warning-box">
+                <h4>❌ 문제: Layer 1만 표시되고 Layer 2가 안 보임</h4>
+                <p><strong>원인 및 해결:</strong></p>
+                <ol>
+                    <li><strong>Layer 2 비활성화:</strong>
+                        <ul>
+                            <li>CubeMX에서 Layer 2를 Enable 했는지 확인</li>
+                            <li><code>HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg2, 1)</code> 호출 확인</li>
+                        </ul>
+                    </li>
+                    <li><strong>Alpha 값이 0:</strong>
+                        <ul>
+                            <li><code>pLayerCfg2.Alpha = 200;</code> 설정 확인</li>
+                        </ul>
+                    </li>
+                    <li><strong>프레임버퍼 주소 오류:</strong>
+                        <ul>
+                            <li><code>pLayerCfg2.FBStartAdress = (uint32_t)&RGB565_320x240;</code> 확인</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="warning-box">
+                <h4>❌ 문제: 색상이 이상하게 표시됨</h4>
+                <p><strong>원인 및 해결:</strong></p>
+                <ol>
+                    <li><strong>픽셀 포맷 불일치:</strong>
+                        <ul>
+                            <li>Layer 1: <code>LTDC_PIXEL_FORMAT_L8</code> 확인</li>
+                            <li>Layer 2: <code>LTDC_PIXEL_FORMAT_RGB565</code> 확인</li>
+                        </ul>
+                    </li>
+                    <li><strong>CLUT 미로드:</strong>
+                        <ul>
+                            <li><code>HAL_LTDC_ConfigCLUT(&hltdc, (uint32_t *)L8_320x240_CLUT, 256, 0);</code> 호출 확인</li>
+                            <li><code>HAL_LTDC_EnableCLUT(&hltdc, 0);</code> 호출 확인</li>
+                        </ul>
+                    </li>
+                    <li><strong>이미지 데이터 손상:</strong>
+                        <ul>
+                            <li>이미지 헤더 파일 재생성</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="warning-box">
+                <h4>❌ 문제: 애니메이션이 끊기거나 깜빡임</h4>
+                <p><strong>원인 및 해결:</strong></p>
+                <ol>
+                    <li><strong>Vertical Blanking 미사용:</strong>
+                        <ul>
+                            <li><code>HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING)</code> 사용</li>
+                            <li>Reload 완료 대기: <code>while(ReloadFlag == 0);</code></li>
+                        </ul>
+                    </li>
+                    <li><strong>Reload Callback 미구현:</strong>
+                        <ul>
+                            <li><code>HAL_LTDC_ReloadEventCallback()</code> 함수 구현 확인</li>
+                            <li><code>ReloadFlag</code> 변수 설정 확인</li>
+                        </ul>
+                    </li>
+                    <li><strong>업데이트 속도 너무 빠름:</strong>
+                        <ul>
+                            <li>적절한 <code>HAL_Delay()</code> 추가</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="warning-box">
+                <h4>❌ 문제: 빌드 오류 (링커 에러)</h4>
+                <p><strong>원인 및 해결:</strong></p>
+                <ol>
+                    <li><strong>메모리 부족:</strong>
+                        <ul>
+                            <li>이미지 데이터가 Flash 크기를 초과하는지 확인</li>
+                            <li>STM32H745I는 1MB Flash 보유</li>
+                            <li>불필요한 데이터 제거 또는 SDRAM 사용 고려</li>
+                        </ul>
+                    </li>
+                    <li><strong>Missing 헤더 파일:</strong>
+                        <ul>
+                            <li><code>L8_320x240.h</code>, <code>RGB565_320x240.h</code> 파일 경로 확인</li>
+                            <li>Include path 설정 확인</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="info-box">
+                <h4>💡 디버깅 팁</h4>
+                <ul>
+                    <li><strong>UART 출력:</strong> 각 단계마다 <code>printf()</code>로 상태 출력</li>
+                    <li><strong>LED 표시:</strong> 초기화 단계마다 LED 켜서 진행 상태 표시</li>
+                    <li><strong>단계별 테스트:</strong> 먼저 1-Layer로 동작 확인 후 2-Layer 추가</li>
+                    <li><strong>CLUT 검증:</strong> 간단한 그라데이션 CLUT로 먼저 테스트</li>
+                    <li><strong>Register 확인:</strong> Debugger로 LTDC 레지스터 값 확인</li>
+                </ul>
+            </div>
+
+            <!-- Appendix -->
+            <h2>부록: 주요 함수 레퍼런스</h2>
+
+            <h3>A.1 LTDC HAL 함수</h3>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>함수</th>
+                        <th>설명</th>
+                        <th>사용 예</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>HAL_LTDC_Init()</code></td>
+                        <td>LTDC 초기화</td>
+                        <td>CubeMX가 자동 생성</td>
+                    </tr>
+                    <tr>
+                        <td><code>HAL_LTDC_ConfigLayer()</code></td>
+                        <td>레이어 설정</td>
+                        <td>Layer 1, 2 설정</td>
+                    </tr>
+                    <tr>
+                        <td><code>HAL_LTDC_ConfigCLUT()</code></td>
+                        <td>CLUT 로드</td>
+                        <td>L8 포맷 사용 시 필수</td>
+                    </tr>
+                    <tr>
+                        <td><code>HAL_LTDC_EnableCLUT()</code></td>
+                        <td>CLUT 활성화</td>
+                        <td>CLUT 로드 후 호출</td>
+                    </tr>
+                    <tr>
+                        <td><code>HAL_LTDC_SetWindowPosition()</code></td>
+                        <td>레이어 위치 변경 (즉시)</td>
+                        <td>정적 위치 변경</td>
+                    </tr>
+                    <tr>
+                        <td><code>HAL_LTDC_SetWindowPosition_NoReload()</code></td>
+                        <td>레이어 위치 변경 (대기)</td>
+                        <td>애니메이션용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HAL_LTDC_Reload()</code></td>
+                        <td>설정 적용</td>
+                        <td>NoReload 함수 후 호출</td>
+                    </tr>
+                    <tr>
+                        <td><code>HAL_LTDC_SetAlpha()</code></td>
+                        <td>투명도 설정</td>
+                        <td>Fade 효과</td>
+                    </tr>
+                    <tr>
+                        <td><code>HAL_LTDC_SetLayerVisible()</code></td>
+                        <td>레이어 On/Off</td>
+                        <td>레이어 표시 제어</td>
+                    </tr>
+                    <tr>
+                        <td><code>HAL_LTDC_ReloadEventCallback()</code></td>
+                        <td>Reload 완료 콜백</td>
+                        <td>동기화용</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>A.2 픽셀 포맷</h3>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>포맷</th>
+                        <th>비트 수</th>
+                        <th>메모리 사용량</th>
+                        <th>색상 수</th>
+                        <th>용도</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>LTDC_PIXEL_FORMAT_L8</code></td>
+                        <td>8-bit</td>
+                        <td>1 byte/pixel</td>
+                        <td>256 (CLUT)</td>
+                        <td>배경 이미지</td>
+                    </tr>
+                    <tr>
+                        <td><code>LTDC_PIXEL_FORMAT_RGB565</code></td>
+                        <td>16-bit</td>
+                        <td>2 bytes/pixel</td>
+                        <td>65,536</td>
+                        <td>일반 이미지</td>
+                    </tr>
+                    <tr>
+                        <td><code>LTDC_PIXEL_FORMAT_ARGB4444</code></td>
+                        <td>16-bit</td>
+                        <td>2 bytes/pixel</td>
+                        <td>4096 + Alpha</td>
+                        <td>반투명 UI</td>
+                    </tr>
+                    <tr>
+                        <td><code>LTDC_PIXEL_FORMAT_ARGB8888</code></td>
+                        <td>32-bit</td>
+                        <td>4 bytes/pixel</td>
+                        <td>16.7M + Alpha</td>
+                        <td>고품질 이미지</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>A.3 Blending 모드</h3>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Factor</th>
+                        <th>설명</th>
+                        <th>수식</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>LTDC_BLENDING_FACTOR1_CA</code></td>
+                        <td>Constant Alpha</td>
+                        <td>Factor1 = Alpha</td>
+                    </tr>
+                    <tr>
+                        <td><code>LTDC_BLENDING_FACTOR1_PAxCA</code></td>
+                        <td>Pixel × Constant Alpha</td>
+                        <td>Factor1 = Pixel_Alpha × Alpha</td>
+                    </tr>
+                    <tr>
+                        <td><code>LTDC_BLENDING_FACTOR2_CA</code></td>
+                        <td>1 - Constant Alpha</td>
+                        <td>Factor2 = 1 - Alpha</td>
+                    </tr>
+                    <tr>
+                        <td><code>LTDC_BLENDING_FACTOR2_PAxCA</code></td>
+                        <td>1 - (Pixel × Constant Alpha)</td>
+                        <td>Factor2 = 1 - (Pixel_Alpha × Alpha)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-box">
+                <h4>Blending 공식:</h4>
+                <p style="text-align: center; font-size: 1.2em; font-family: monospace;">
+                    <strong>Output = (Foreground × Factor1) + (Background × Factor2)</strong>
+                </p>
+            </div>
+
+            <!-- Summary -->
+            <h2>요약 체크리스트</h2>
+
+            <div class="success-box">
+                <h4>✅ 구현 완료 체크리스트</h4>
+                <ul style="list-style: none;">
+                    <li>☐ LTDC_Display_2Layers 참조 프로젝트 분석 완료</li>
+                    <li>☐ 현재 프로젝트 백업 완료</li>
+                    <li>☐ 이미지 파일 준비 (L8_320x240.h, RGB565_320x240.h)</li>
+                    <li>☐ CubeMX에서 Layer 1 설정 (L8 포맷)</li>
+                    <li>☐ CubeMX에서 Layer 2 활성화 및 설정 (RGB565)</li>
+                    <li>☐ PD7 (LCD_DISP) GPIO 설정 확인</li>
+                    <li>☐ LTDC Clock 설정 확인 (PLL3 = 9.63 MHz)</li>
+                    <li>☐ ltdc_app.c 수정 (2-Layer 설정)</li>
+                    <li>☐ ltdc_app.h 헤더 파일 생성</li>
+                    <li>☐ CLUT 로드 코드 추가</li>
+                    <li>☐ Reload Callback 구현</li>
+                    <li>☐ 빌드 성공</li>
+                    <li>☐ 플래시 성공</li>
+                    <li>☐ LCD에 2개 레이어 표시 확인</li>
+                    <li>☐ Alpha Blending 효과 확인</li>
+                    <li>☐ 레이어 위치 변경 (애니메이션) 테스트</li>
+                    <li>☐ 성능 측정 완료</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <footer>
+            <p><strong>STM32H745I-DISCO LTDC 2-Layer 구현 가이드</strong></p>
+            <p>작성일: 2025년 11월 17일</p>
+            <p>참조: LTDC_Display_2Layers 예제 프로젝트</p>
+            <p style="margin-top: 20px; font-size: 0.9em;">
+                이 문서는 STM32H745I-DISCO 보드에서 LTDC를 사용하여<br>
+                2-Layer 디스플레이를 구현하는 완전한 가이드입니다.
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

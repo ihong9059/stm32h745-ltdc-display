@@ -35,26 +35,25 @@ void MX_LTDC_Init(void)
   /* USER CODE END LTDC_Init 0 */
 
   LTDC_LayerCfgTypeDef pLayerCfg = {0};
+  LTDC_LayerCfgTypeDef pLayerCfg1 = {0};
 
   /* USER CODE BEGIN LTDC_Init 1 */
 
   /* USER CODE END LTDC_Init 1 */
-  /* RK043FN48H LCD Timing Configuration */
-  /* HSYNC = 41, VSYNC = 10, HBP = 13, VBP = 2, HFP = 32, VFP = 2 */
-  /* Width = 480, Height = 272 */
   hltdc.Instance = LTDC;
   hltdc.Init.HSPolarity = LTDC_HSPOLARITY_AL;
   hltdc.Init.VSPolarity = LTDC_VSPOLARITY_AL;
   hltdc.Init.DEPolarity = LTDC_DEPOLARITY_AL;
   hltdc.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
-  hltdc.Init.HorizontalSync = 40;        /* HSYNC - 1 = 41 - 1 */
-  hltdc.Init.VerticalSync = 9;           /* VSYNC - 1 = 10 - 1 */
-  hltdc.Init.AccumulatedHBP = 53;        /* HSYNC + HBP - 1 = 41 + 13 - 1 */
-  hltdc.Init.AccumulatedVBP = 11;        /* VSYNC + VBP - 1 = 10 + 2 - 1 */
-  hltdc.Init.AccumulatedActiveW = 533;   /* Width + HSYNC + HBP - 1 = 480 + 41 + 13 - 1 */
-  hltdc.Init.AccumulatedActiveH = 283;   /* Height + VSYNC + VBP - 1 = 272 + 10 + 2 - 1 */
-  hltdc.Init.TotalWidth = 565;           /* Width + HSYNC + HBP + HFP - 1 = 480 + 41 + 13 + 32 - 1 */
-  hltdc.Init.TotalHeigh = 285;           /* Height + VSYNC + VBP + VFP - 1 = 272 + 10 + 2 + 2 - 1 */
+  /* RK043FN48H LCD Timing */
+  hltdc.Init.HorizontalSync = 40;         /* HSYNC = 41 - 1 */
+  hltdc.Init.VerticalSync = 9;            /* VSYNC = 10 - 1 */
+  hltdc.Init.AccumulatedHBP = 53;         /* HSYNC + HBP = 41 + 13 - 1 */
+  hltdc.Init.AccumulatedVBP = 11;         /* VSYNC + VBP = 10 + 2 - 1 */
+  hltdc.Init.AccumulatedActiveW = 533;    /* HSYNC + HBP + WIDTH = 41 + 13 + 480 - 1 */
+  hltdc.Init.AccumulatedActiveH = 283;    /* VSYNC + VBP + HEIGHT = 10 + 2 + 272 - 1 */
+  hltdc.Init.TotalWidth = 565;            /* HSYNC + HBP + WIDTH + HFP = 41 + 13 + 480 + 32 - 1 */
+  hltdc.Init.TotalHeigh = 285;            /* VSYNC + VBP + HEIGHT + VFP = 10 + 2 + 272 + 2 - 1 */
   hltdc.Init.Backcolor.Blue = 0;
   hltdc.Init.Backcolor.Green = 0;
   hltdc.Init.Backcolor.Red = 0;
@@ -62,8 +61,11 @@ void MX_LTDC_Init(void)
   {
     Error_Handler();
   }
+
   /* USER CODE BEGIN LTDC_Init 2 */
-  /* NOTE: Layer configuration is done in ltdc_app.c LTDC_App_Init() function */
+  /* NOTE: Layer configuration is skipped here */
+  /* Layers will be configured in ltdc_app.c LTDC_App_Init() function */
+  /* This avoids conflicts with the 2-layer setup */
 
   /* USER CODE END LTDC_Init 2 */
 
@@ -167,6 +169,10 @@ void HAL_LTDC_MspInit(LTDC_HandleTypeDef* ltdcHandle)
     HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
   /* USER CODE BEGIN LTDC_MspInit 1 */
+
+  /* LTDC interrupt Init */
+  HAL_NVIC_SetPriority(LTDC_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(LTDC_IRQn);
 
   /* USER CODE END LTDC_MspInit 1 */
   }

@@ -51,17 +51,15 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
-  /* USER CODE BEGIN MX_GPIO_Init_2 */
-  /* Configure PD7 (LCD_DISP - LCD Enable/Backlight Control) as GPIO Output */
+  /* Configure PD7 (LCD_DISP - LCD Backlight Enable) */
   GPIO_InitStruct.Pin = GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /* Set PD7 HIGH to enable LCD */
+  /* Set PD7 HIGH to enable LCD backlight */
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_7, GPIO_PIN_SET);
-  /* USER CODE END MX_GPIO_Init_2 */
 
 }
 

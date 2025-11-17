@@ -1,18 +1,23 @@
 /**
   ******************************************************************************
   * @file    ltdc_app.c
-  * @brief   LTDC Application Code - Display RGB565 Image
+  * @brief   LTDC Application Code - 2 Layer Display
   * @note    This file contains the LCD configuration and display functions
-  *          for STM32H745I-DISCO board
+  *          for STM32H745I-DISCO board with 2-Layer support
   ******************************************************************************
   */
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "RGB565_480x272.h"
+#include <stdio.h>
+#include "L8_320x240.h"      // Layer 1: Indexed color image
+#include "RGB565_320x240.h"  // Layer 2: RGB565 image
 
 /* External variables --------------------------------------------------------*/
 extern LTDC_HandleTypeDef hltdc;
+
+/* Reload flag for vertical blanking sync */
+__IO uint32_t ReloadFlag = 0;
 
 /* Private defines -----------------------------------------------------------*/
 /* LCD RK043FN48H Timing defines */
@@ -26,12 +31,12 @@ extern LTDC_HandleTypeDef hltdc;
 #define RK043FN48H_HEIGHT           ((uint16_t)272)  /* LCD height                 */
 
 /* Private function prototypes -----------------------------------------------*/
-static void LCD_Config(void);
+static void LCD_Config_2Layers(void);
 
 /* Public functions ----------------------------------------------------------*/
 
 /**
-  * @brief  Initialize LCD and display image
+  * @brief  Initialize LCD with 2 layers
   * @note   Call this function after LTDC peripheral initialization
   * @retval None
   */
@@ -43,102 +48,175 @@ void LTDC_App_Init(void)
   /* Small delay to ensure LCD is ready */
   HAL_Delay(10);
 
-  /* Configure LCD Layer with image from Flash */
-  LCD_Config();
+  /* Configure 2 layers */
+  LCD_Config_2Layers();
+
+  /* Load CLUT for Layer 1 (indexed color) */
+  HAL_LTDC_ConfigCLUT(&hltdc, (uint32_t *)L8_320x240_CLUT, 256, 0);
+
+  /* Enable CLUT for Layer 1 */
+  HAL_LTDC_EnableCLUT(&hltdc, 0);
+
+  printf("LTDC 2-Layer initialized\r\n");
 }
 
 /**
-  * @brief  LCD Layer Configuration
-  * @note   Configure LTDC Layer 1 to display RGB565 image from Flash memory
+  * @brief  Configure LTDC with 2 layers
+  * @note   Layer 1 (Background): L8 indexed color at (0,0)
+  *         Layer 2 (Foreground): RGB565 at (160,32)
   * @retval None
   */
-static void LCD_Config(void)
+static void LCD_Config_2Layers(void)
 {
-  LTDC_LayerCfgTypeDef pLayerCfg;
+  LTDC_LayerCfgTypeDef pLayerCfg1;
+  LTDC_LayerCfgTypeDef pLayerCfg2;
 
-  /* Layer 1 Configuration */
+  /*##-1- Layer 1 Configuration (Background - L8 Indexed Color) ##############*/
 
   /* Windowing configuration */
-  /* In this case all the active display area is used to display a picture */
-  pLayerCfg.WindowX0 = 0;
-  pLayerCfg.WindowX1 = RK043FN48H_WIDTH;
-  pLayerCfg.WindowY0 = 0;
-  pLayerCfg.WindowY1 = RK043FN48H_HEIGHT;
+  pLayerCfg1.WindowX0 = 0;
+  pLayerCfg1.WindowX1 = 320;
+  pLayerCfg1.WindowY0 = 0;
+  pLayerCfg1.WindowY1 = 240;
 
-  /* Pixel Format configuration: RGB565 */
-  pLayerCfg.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
+  /* Pixel Format: L8 (8-bit indexed color) */
+  pLayerCfg1.PixelFormat = LTDC_PIXEL_FORMAT_L8;
 
-  /* Start Address configuration: frame buffer is located at Flash memory */
-  pLayerCfg.FBStartAdress = (uint32_t)&RGB565_480x272;
+  /* Frame buffer address in Flash */
+  pLayerCfg1.FBStartAdress = (uint32_t)&L8_320x240;
 
-  /* Alpha constant (255 == totally opaque) */
-  pLayerCfg.Alpha = 255;
+  /* Alpha: fully opaque */
+  pLayerCfg1.Alpha = 255;
+  pLayerCfg1.Alpha0 = 0;
 
-  /* Default Color configuration (configure A,R,G,B component values) */
-  pLayerCfg.Alpha0 = 0; /* fully transparent */
-  pLayerCfg.Backcolor.Blue = 0;
-  pLayerCfg.Backcolor.Green = 0;
-  pLayerCfg.Backcolor.Red = 0;
+  /* Default background color */
+  pLayerCfg1.Backcolor.Blue = 0;
+  pLayerCfg1.Backcolor.Green = 0;
+  pLayerCfg1.Backcolor.Red = 0;
 
-  /* Configure blending factors */
-  pLayerCfg.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
-  pLayerCfg.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
+  /* Blending factors */
+  pLayerCfg1.BlendingFactor1 = LTDC_BLENDING_FACTOR1_PAxCA;
+  pLayerCfg1.BlendingFactor2 = LTDC_BLENDING_FACTOR2_PAxCA;
 
-  /* Configure the number of lines and number of pixels per line */
-  pLayerCfg.ImageWidth = RK043FN48H_WIDTH;
-  pLayerCfg.ImageHeight = RK043FN48H_HEIGHT;
+  /* Image dimensions */
+  pLayerCfg1.ImageWidth = 320;
+  pLayerCfg1.ImageHeight = 240;
 
-  /* Configure the Layer */
-  if(HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg, 1) != HAL_OK)
+  /*##-2- Layer 2 Configuration (Foreground - RGB565) ########################*/
+
+  /* Windowing configuration */
+  pLayerCfg2.WindowX0 = 160;  // Offset to the right
+  pLayerCfg2.WindowX1 = 480;
+  pLayerCfg2.WindowY0 = 32;   // Offset downward
+  pLayerCfg2.WindowY1 = 272;
+
+  /* Pixel Format: RGB565 */
+  pLayerCfg2.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
+
+  /* Frame buffer address in Flash */
+  pLayerCfg2.FBStartAdress = (uint32_t)&RGB565_320x240;
+
+  /* Alpha: 78% opaque for blending effect */
+  pLayerCfg2.Alpha = 200;
+  pLayerCfg2.Alpha0 = 0;
+
+  /* Default background color */
+  pLayerCfg2.Backcolor.Blue = 0;
+  pLayerCfg2.Backcolor.Green = 0;
+  pLayerCfg2.Backcolor.Red = 0;
+
+  /* Blending factors */
+  pLayerCfg2.BlendingFactor1 = LTDC_BLENDING_FACTOR1_PAxCA;
+  pLayerCfg2.BlendingFactor2 = LTDC_BLENDING_FACTOR2_PAxCA;
+
+  /* Image dimensions */
+  pLayerCfg2.ImageWidth = 320;
+  pLayerCfg2.ImageHeight = 240;
+
+  /*##-3- Configure Layers ####################################################*/
+
+  /* Configure Layer 1 (Background) */
+  if(HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg1, 0) != HAL_OK)
   {
-    /* Configuration Error */
+    Error_Handler();
+  }
+
+  /* Configure Layer 2 (Foreground) */
+  if(HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg2, 1) != HAL_OK)
+  {
     Error_Handler();
   }
 }
 
-
 /**
-  * @brief  Update display with new image data
-  * @param  imageData: Pointer to image data (RGB565 format)
-  * @param  x0: Start X position
-  * @param  y0: Start Y position
-  * @param  width: Image width
-  * @param  height: Image height
+  * @brief  LTDC Reload Event Callback
+  * @note   Called when LTDC reload completes (vertical blanking)
+  * @param  hltdc: LTDC handle
   * @retval None
   */
-void LTDC_UpdateDisplay(const uint16_t *imageData, uint16_t x0, uint16_t y0,
-                         uint16_t width, uint16_t height)
+void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc)
 {
-  LTDC_LayerCfgTypeDef pLayerCfg;
+  ReloadFlag = 1;
+}
 
-  /* Configure new window parameters */
-  pLayerCfg.WindowX0 = x0;
-  pLayerCfg.WindowX1 = x0 + width;
-  pLayerCfg.WindowY0 = y0;
-  pLayerCfg.WindowY1 = y0 + height;
+/**
+  * @brief  Update Layer 1 position (for animation)
+  * @param  x0: X start position
+  * @param  y0: Y start position
+  * @retval None
+  */
+void LTDC_SetLayer1Position(uint32_t x0, uint32_t y0)
+{
+  /* Set new position without immediate reload */
+  HAL_LTDC_SetWindowPosition_NoReload(&hltdc, x0, y0, 0);
+}
 
-  /* Pixel Format configuration */
-  pLayerCfg.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
+/**
+  * @brief  Update Layer 2 position (for animation)
+  * @param  x0: X start position
+  * @param  y0: Y start position
+  * @retval None
+  */
+void LTDC_SetLayer2Position(uint32_t x0, uint32_t y0)
+{
+  /* Set new position without immediate reload */
+  HAL_LTDC_SetWindowPosition_NoReload(&hltdc, x0, y0, 1);
+}
 
-  /* Frame buffer address */
-  pLayerCfg.FBStartAdress = (uint32_t)imageData;
+/**
+  * @brief  Trigger LTDC reload and wait for completion
+  * @note   Use this after SetLayerPosition_NoReload functions
+  * @retval None
+  */
+void LTDC_ReloadAndWait(void)
+{
+  /* Trigger reload on vertical blanking */
+  ReloadFlag = 0;
+  HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
 
-  /* Alpha and blending */
-  pLayerCfg.Alpha = 255;
-  pLayerCfg.Alpha0 = 0;
-  pLayerCfg.Backcolor.Blue = 0;
-  pLayerCfg.Backcolor.Green = 0;
-  pLayerCfg.Backcolor.Red = 0;
-  pLayerCfg.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
-  pLayerCfg.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
-
-  /* Image size */
-  pLayerCfg.ImageWidth = width;
-  pLayerCfg.ImageHeight = height;
-
-  /* Reconfigure Layer */
-  if(HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg, 1) != HAL_OK)
+  /* Wait for reload to complete */
+  while(ReloadFlag == 0)
   {
-    Error_Handler();
+    /* Wait */
   }
+}
+
+/**
+  * @brief  Set Layer 1 alpha (transparency)
+  * @param  alpha: Alpha value (0-255, 0=transparent, 255=opaque)
+  * @retval None
+  */
+void LTDC_SetLayer1Alpha(uint8_t alpha)
+{
+  HAL_LTDC_SetAlpha(&hltdc, alpha, 0);
+}
+
+/**
+  * @brief  Set Layer 2 alpha (transparency)
+  * @param  alpha: Alpha value (0-255, 0=transparent, 255=opaque)
+  * @retval None
+  */
+void LTDC_SetLayer2Alpha(uint8_t alpha)
+{
+  HAL_LTDC_SetAlpha(&hltdc, alpha, 1);
 }

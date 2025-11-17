@@ -165,9 +165,6 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
-  /* Turn on LD7 = SystemClock_Config complete */
-  HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_2, GPIO_PIN_SET);
-
   /* Configure the peripherals common clocks */
   PeriphCommonClock_Config();
 /* USER CODE BEGIN Boot_Mode_Sequence_2 */
@@ -196,18 +193,7 @@ Error_Handler();
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-
-  /* Turn on LD8 = GPIO Init complete */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, GPIO_PIN_SET);
-
   MX_LTDC_Init();
-
-  /* All LEDs ON = LTDC Init complete */
-  HAL_GPIO_WritePin(GPIOI, GPIO_PIN_13, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_2, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, GPIO_PIN_SET);
-  HAL_Delay(200);
-
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
@@ -215,7 +201,7 @@ Error_Handler();
   printf("\r\n");
   printf("=================================\r\n");
   printf("STM32H745I-DISCO LTDC Display\r\n");
-  printf("LTDC_Display_1Layer Example\r\n");
+  printf("LTDC_Display_2Layers Example\r\n");
   printf("CM7 Core\r\n");
   printf("=================================\r\n\r\n");
 
@@ -230,7 +216,7 @@ Error_Handler();
   HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_2, GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, GPIO_PIN_SET);
 
-  /* Initialize LTDC Display with RGB565 Image */
+  /* Initialize LTDC Display with 2 Layers */
   LTDC_App_Init();
 
   /* LD6 only ON = LTDC_App_Init complete SUCCESS! */
@@ -240,25 +226,82 @@ Error_Handler();
 
   printf("DEBUG: After LTDC_App_Init\r\n");
   printf("LCD initialized successfully!\r\n");
-  printf("RGB565 image displayed on LCD\r\n\r\n");
+  printf("2 Layers displayed with alpha blending\r\n\r\n");
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  /* Layer animation variables */
+  uint32_t Xpos1 = 0;
+  uint32_t Xpos2 = 160;
+  uint32_t Ypos1 = 0;
+  uint32_t Ypos2 = 32;
+  uint32_t index = 0;
+  uint32_t counter = 0;
+  uint32_t last_tick = HAL_GetTick();
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
-    /* Image is displayed continuously on LCD */
+    /* Animation 1: Move layers towards each other */
+    for (index = 0; index < 32; index++)
+    {
+      /* Calculate new positions */
+      Xpos1 = index * 5;
+      Ypos1 = index;
+      Xpos2 = 160 - index * 5;
+      Ypos2 = 32 - index;
 
-    /* Blink all 3 LEDs simultaneously every 1 second */
+      /* Update Layer 1 position */
+      LTDC_SetLayer1Position(Xpos1, Ypos1);
+
+      /* Update Layer 2 position */
+      LTDC_SetLayer2Position(Xpos2, Ypos2);
+
+      /* Reload and wait for vertical blanking */
+      LTDC_ReloadAndWait();
+    }
+
+    HAL_Delay(500);
+
+    /* Animation 2: Return to original positions */
+    for (index = 0; index < 32; index++)
+    {
+      /* Calculate new positions (swap layer movements) */
+      Xpos2 = index * 5;
+      Ypos2 = index;
+      Xpos1 = 160 - index * 5;
+      Ypos1 = 32 - index;
+
+      /* Update Layer 1 position */
+      LTDC_SetLayer1Position(Xpos1, Ypos1);
+
+      /* Update Layer 2 position */
+      LTDC_SetLayer2Position(Xpos2, Ypos2);
+
+      /* Reload and wait for vertical blanking */
+      LTDC_ReloadAndWait();
+    }
+
+    HAL_Delay(500);
+
+    /* Toggle LEDs to show loop is running */
     HAL_GPIO_TogglePin(GPIOI, GPIO_PIN_13);  /* LD6 */
     HAL_GPIO_TogglePin(GPIOJ, GPIO_PIN_2);   /* LD7 */
     HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_3);   /* LD8 */
-    HAL_Delay(1000);  /* 1 second delay */
+
+    /* Print counter every 1 second */
+    if (HAL_GetTick() - last_tick >= 1000)
+    {
+      counter++;
+      printf("Counter: %lu sec\r\n", counter);
+      last_tick = HAL_GetTick();
+    }
 
   }
   /* USER CODE END 3 */

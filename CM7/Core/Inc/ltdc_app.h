@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    ltdc_app.h
-  * @brief   LTDC Application Header File
+  * @brief   LTDC Application Header File - 2 Layer Display
   ******************************************************************************
   */
 
@@ -18,8 +18,11 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void LTDC_App_Init(void);
-void LTDC_UpdateDisplay(const uint16_t *imageData, uint16_t x0, uint16_t y0,
-                         uint16_t width, uint16_t height);
+void LTDC_SetLayer1Position(uint32_t x0, uint32_t y0);
+void LTDC_SetLayer2Position(uint32_t x0, uint32_t y0);
+void LTDC_ReloadAndWait(void);
+void LTDC_SetLayer1Alpha(uint8_t alpha);
+void LTDC_SetLayer2Alpha(uint8_t alpha);
 
 #ifdef __cplusplus
 }

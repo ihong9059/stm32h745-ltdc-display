@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTDC Display 프로젝트 마이그레이션 가이드</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #03234b;
+            border-bottom: 3px solid #03234b;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0066cc;
+            margin-top: 30px;
+            border-left: 5px solid #0066cc;
+            padding-left: 15px;
+        }
+        h3 {
+            color: #333;
+            margin-top: 20px;
+        }
+        h4 {
+            color: #555;
+            margin-top: 15px;
+        }
+        .section {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .tip-box {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .important-box {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .code-box {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+        ol, ul {
+            margin: 10px 0;
+            padding-left: 30px;
+        }
+        li {
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #03234b;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .step-number {
+            display: inline-block;
+            background-color: #0066cc;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .screenshot {
+            background-color: #e9ecef;
+            border: 2px dashed #6c757d;
+            padding: 20px;
+            text-align: center;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .config-item {
+            background-color: #f8f9fa;
+            border-left: 3px solid #0066cc;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .pin-table {
+            font-size: 12px;
+        }
+        .comparison-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .comparison-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>LTDC Display 1Layer 프로젝트 마이그레이션 가이드</h1>
+    <p><strong>목적:</strong> .ioc 파일 없이 작성된 LTDC_Display_1Layer 예제를 STM32CubeMX .ioc 기반 프로젝트로 마이그레이션</p>
+
+    <div class="section">
+        <h2>목차</h2>
+        <ol>
+            <li><a href="#overview">프로젝트 개요 및 분석</a></li>
+            <li><a href="#requirements">필요 사항</a></li>
+            <li><a href="#project-creation">새 프로젝트 생성</a></li>
+            <li><a href="#cubemx-config">STM32CubeMX 상세 설정</a></li>
+            <li><a href="#code-generation">코드 생성</a></li>
+            <li><a href="#code-migration">애플리케이션 코드 포팅</a></li>
+            <li><a href="#build-test">빌드 및 테스트</a></li>
+            <li><a href="#troubleshooting">문제 해결</a></li>
+        </ol>
+    </div>
+
+    <div class="section" id="overview">
+        <h2>1. 프로젝트 개요 및 분석</h2>
+
+        <h3>1.1 원본 프로젝트 분석 결과</h3>
+
+        <div class="info-box">
+            <strong>LTDC_Display_1Layer 프로젝트:</strong>
+            <ul>
+                <li>STM32H745I-DISCO 보드의 4.3" TFT LCD (RK043FN48H)에 이미지 표시</li>
+                <li>해상도: 480x272 픽셀</li>
+                <li>픽셀 포맷: RGB565 (16 bits/pixel)</li>
+                <li>LTDC 단일 레이어 사용</li>
+                <li>듀얼 코어: CM7(메인), CM4(대기 모드)</li>
+            </ul>
+        </div>
+
+        <h3>1.2 사용된 주요 주변장치</h3>
+        <table>
+            <tr>
+                <th>주변장치</th>
+                <th>용도</th>
+                <th>설정 상세</th>
+            </tr>
+            <tr>
+                <td><strong>LTDC</strong></td>
+                <td>LCD 디스플레이 컨트롤러</td>
+                <td>480x272, RGB565, Layer 1 사용</td>
+            </tr>
+            <tr>
+                <td><strong>GPIO</strong></td>
+                <td>LTDC 신호 및 제어</td>
+                <td>GPIOI, J, K, H, D (LCD_DISP 제어)</td>
+            </tr>
+            <tr>
+                <td><strong>RCC</strong></td>
+                <td>클럭 설정</td>
+                <td>CM7: 400MHz, PLL3 for LTDC: 9.63MHz</td>
+            </tr>
+            <tr>
+                <td><strong>MPU</strong></td>
+                <td>메모리 보호</td>
+                <td>전체 메모리 영역 설정</td>
+            </tr>
+            <tr>
+                <td><strong>Cache</strong></td>
+                <td>성능 최적화</td>
+                <td>I-Cache, D-Cache 활성화</td>
+            </tr>
+            <tr>
+                <td><strong>HSEM</strong></td>
+                <td>코어 간 동기화</td>
+                <td>CM4 부팅 동기화</td>
+            </tr>
+            <tr>
+                <td><strong>BSP</strong></td>
+                <td>보드 지원 패키지</td>
+                <td>LED, LCD 제어</td>
+            </tr>
+        </table>
+
+        <h3>1.3 LCD 타이밍 파라미터 (RK043FN48H)</h3>
+        <div class="config-item">
+            <strong>동기화 타이밍:</strong>
+            <ul>
+                <li>Horizontal Sync (HSYNC): 41</li>
+                <li>Horizontal Back Porch (HBP): 13</li>
+                <li>Active Width: 480</li>
+                <li>Horizontal Front Porch (HFP): 32</li>
+                <li>Vertical Sync (VSYNC): 10</li>
+                <li>Vertical Back Porch (VBP): 2</li>
+                <li>Active Height: 272</li>
+                <li>Vertical Front Porch (VFP): 2</li>
+            </ul>
+        </div>
+
+        <h3>1.4 클럭 구성</h3>
+        <table>
+            <tr>
+                <th>클럭 소스</th>
+                <th>주파수</th>
+                <th>설정</th>
+            </tr>
+            <tr>
+                <td>HSE</td>
+                <td>25 MHz</td>
+                <td>외부 크리스탈</td>
+            </tr>
+            <tr>
+                <td>PLL1 (System)</td>
+                <td>400 MHz</td>
+                <td>M=5, N=160, P=2</td>
+            </tr>
+            <tr>
+                <td>SYSCLK (CM7)</td>
+                <td>400 MHz</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>HCLK</td>
+                <td>200 MHz</td>
+                <td>AHB Prescaler = 2</td>
+            </tr>
+            <tr>
+                <td>APB1/2/3/4</td>
+                <td>100 MHz</td>
+                <td>APB Prescaler = 2</td>
+            </tr>
+            <tr>
+                <td>PLL3 (LTDC)</td>
+                <td>9.63 MHz</td>
+                <td>M=5, N=160, R=83</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section" id="requirements">
+        <h2>2. 필요 사항</h2>
+
+        <h3>2.1 소프트웨어</h3>
+        <ul>
+            <li>STM32CubeIDE 최신 버전 (1.13.0 이상)</li>
+            <li>STM32CubeH7 펌웨어 패키지 (자동 다운로드)</li>
+        </ul>
+
+        <h3>2.2 하드웨어</h3>
+        <ul>
+            <li>STM32H745I-DISCO 보드</li>
+            <li>USB 케이블 (ST-LINK 연결용)</li>
+        </ul>
+
+        <h3>2.3 준비 파일</h3>
+        <ul>
+            <li><strong>RGB565_480x272.h</strong> - 디스플레이할 이미지 파일</li>
+            <li>원본 프로젝트의 애플리케이션 로직 (참고용)</li>
+        </ul>
+    </div>
+
+    <div class="section" id="project-creation">
+        <h2>3. 새 프로젝트 생성</h2>
+
+        <h3>3.1 STM32CubeIDE에서 프로젝트 생성</h3>
+        <ol>
+            <li>
+                <span class="step-number">1</span>
+                <strong>STM32CubeIDE 실행</strong>
+                <ul>
+                    <li>워크스페이스 선택: <code>/Users/maeg/todo/stm32</code></li>
+                </ul>
+            </li>
+            <li>
+                <span class="step-number">2</span>
+                <strong>File → New → STM32 Project</strong>
+            </li>
+            <li>
+                <span class="step-number">3</span>
+                <strong>Board Selector 탭</strong>
+                <ul>
+                    <li>Commercial Part Number: <code>STM32H745I-DISCO</code> 입력</li>
+                    <li>검색 결과에서 선택</li>
+                    <li><strong>Next</strong> 클릭</li>
+                </ul>
+            </li>
+            <li>
+                <span class="step-number">4</span>
+                <strong>프로젝트 설정</strong>
+                <ul>
+                    <li>Project Name: <code>LTDC_Display_CubeMX</code></li>
+                    <li>Targeted Language: <code>C</code></li>
+                    <li>Targeted Binary Type: <code>Executable</code></li>
+                    <li>Targeted Project Type: <code>STM32Cube</code></li>
+                    <li><strong>Next</strong> 클릭</li>
+                </ul>
+            </li>
+            <li>
+                <span class="step-number">5</span>
+                <strong>펌웨어 패키지</strong>
+                <ul>
+                    <li>Use default firmware location 선택</li>
+                    <li>최신 버전 확인 (필요시 Download)</li>
+                    <li><strong>Finish</strong> 클릭</li>
+                </ul>
+            </li>
+            <li>
+                <span class="step-number">6</span>
+                <strong>Initialize all peripherals?</strong>
+                <ul>
+                    <li><strong class="important-box" style="display: inline;">반드시 "Yes" 선택!</strong></li>
+                    <li>이렇게 하면 보드의 기본 주변장치가 자동 설정됩니다</li>
+                </ul>
+            </li>
+        </ol>
+
+        <div class="tip-box">
+            <strong>팁:</strong> "Yes"를 선택하면 LED, 버튼, LCD 핀 등이 자동으로 구성되어 수동 설정이 크게 줄어듭니다.
+        </div>
+    </div>
+
+    <div class="section" id="cubemx-config">
+        <h2>4. STM32CubeMX 상세 설정</h2>
+
+        <p>프로젝트가 생성되면 <code>.ioc</code> 파일이 자동으로 열립니다. 열리지 않은 경우 Project Explorer에서 더블클릭하세요.</p>
+
+        <h3>4.1 Pinout & Configuration</h3>
+
+        <h4>4.1.1 System Core 설정</h4>
+
+        <div class="config-item">
+            <strong>RCC (Reset and Clock Control)</strong>
+            <ol>
+                <li>좌측 패널에서 <strong>System Core → RCC</strong> 선택</li>
+                <li><strong>High Speed Clock (HSE)</strong>: <code>Crystal/Ceramic Resonator</code> 선택</li>
+                <li><strong>Low Speed Clock (LSE)</strong>: Disable (기본값)</li>
+            </ol>
+        </div>
+
+        <div class="config-item">
+            <strong>SYS (System)</strong>
+            <ol>
+                <li>좌측 패널에서 <strong>System Core → SYS</strong> 선택</li>
+                <li><strong>Timebase Source</strong>: <code>SysTick</code> (기본값)</li>
+                <li><strong>Debug</strong>: <code>Serial Wire</code> (기본값)</li>
+            </ol>
+        </div>
+
+        <div class="config-item">
+            <strong>GPIO</strong>
+            <p>보드 초기화에서 대부분의 GPIO가 자동 설정되었지만 확인이 필요합니다:</p>
+            <ol>
+                <li><strong>LED 핀 확인</strong>:
+                    <ul>
+                        <li>PI12 (LED1) - GPIO_Output</li>
+                        <li>PI13 (LED2) - GPIO_Output</li>
+                        <li>PI14 (LED3) - GPIO_Output</li>
+                        <li>PI15 (LED4) - GPIO_Output</li>
+                    </ul>
+                </li>
+                <li><strong>LCD Display Enable</strong>:
+                    <ul>
+                        <li>PD7 (LCD_DISP) - GPIO_Output, 초기값: High</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <h4>4.1.2 Multimedia - LTDC 설정</h4>
+
+        <div class="important-box">
+            <strong>중요:</strong> LTDC는 이 프로젝트의 핵심 주변장치입니다. 정확한 설정이 필요합니다.
+        </div>
+
+        <ol>
+            <li>
+                <strong>좌측 패널에서 Multimedia → LTDC 선택</strong>
+            </li>
+            <li>
+                <strong>Mode 탭:</strong>
+                <ul>
+                    <li><strong>Display</strong>: <code>Display1</code> 체크 ✓</li>
+                    <li>Layers:
+                        <ul>
+                            <li><strong>Layer 0</strong>: 체크 해제 ✗</li>
+                            <li><strong>Layer 1</strong>: 체크 ✓ (우리는 Layer 1만 사용)</li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <strong>Configuration → Parameter Settings:</strong>
+
+                <h5>Display 타이밍 설정</h5>
+                <table class="pin-table">
+                    <tr>
+                        <th>파라미터</th>
+                        <th>값</th>
+                        <th>설명</th>
+                    </tr>
+                    <tr>
+                        <td>Horizontal Synchronization Width</td>
+                        <td>40</td>
+                        <td>HSYNC - 1 (41 - 1)</td>
+                    </tr>
+                    <tr>
+                        <td>Vertical Synchronization Height</td>
+                        <td>9</td>
+                        <td>VSYNC - 1 (10 - 1)</td>
+                    </tr>
+                    <tr>
+                        <td>Accumulated Horizontal Back Porch</td>
+                        <td>53</td>
+                        <td>HSYNC + HBP - 1 (41 + 13 - 1)</td>
+                    </tr>
+                    <tr>
+                        <td>Accumulated Vertical Back Porch</td>
+                        <td>11</td>
+                        <td>VSYNC + VBP - 1 (10 + 2 - 1)</td>
+                    </tr>
+                    <tr>
+                        <td>Accumulated Active Width</td>
+                        <td>533</td>
+                        <td>HSYNC + HBP + Width - 1 (41 + 13 + 480 - 1)</td>
+                    </tr>
+                    <tr>
+                        <td>Accumulated Active Height</td>
+                        <td>283</td>
+                        <td>VSYNC + VBP + Height - 1 (10 + 2 + 272 - 1)</td>
+                    </tr>
+                    <tr>
+                        <td>Total Width</td>
+                        <td>565</td>
+                        <td>HSYNC + HBP + Width + HFP - 1 (41 + 13 + 480 + 32 - 1)</td>
+                    </tr>
+                    <tr>
+                        <td>Total Height</td>
+                        <td>285</td>
+                        <td>VSYNC + VBP + Height + VFP - 1 (10 + 2 + 272 + 2 - 1)</td>
+                    </tr>
+                </table>
+
+                <h5>극성 설정</h5>
+                <ul>
+                    <li>HSYNC Polarity: <code>Active Low</code></li>
+                    <li>VSYNC Polarity: <code>Active Low</code></li>
+                    <li>DE Polarity: <code>Active Low</code></li>
+                    <li>PC Polarity: <code>IPC (Input Pixel Clock)</code></li>
+                </ul>
+
+                <h5>배경색 설정</h5>
+                <ul>
+                    <li>Red: <code>0</code></li>
+                    <li>Green: <code>0</code></li>
+                    <li>Blue: <code>0</code></li>
+                </ul>
+            </li>
+            <li>
+                <strong>Layer 1 설정:</strong>
+                <table class="pin-table">
+                    <tr>
+                        <th>파라미터</th>
+                        <th>값</th>
+                    </tr>
+                    <tr>
+                        <td>Window Horizontal Start Position</td>
+                        <td>0</td>
+                    </tr>
+                    <tr>
+                        <td>Window Horizontal Stop Position</td>
+                        <td>479</td>
+                    </tr>
+                    <tr>
+                        <td>Window Vertical Start Position</td>
+                        <td>0</td>
+                    </tr>
+                    <tr>
+                        <td>Window Vertical Stop Position</td>
+                        <td>271</td>
+                    </tr>
+                    <tr>
+                        <td>Pixel Format</td>
+                        <td><strong>RGB565</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Alpha</td>
+                        <td>255</td>
+                    </tr>
+                    <tr>
+                        <td>Alpha0</td>
+                        <td>0</td>
+                    </tr>
+                    <tr>
+                        <td>Blending Factor 1</td>
+                        <td>Constant Alpha</td>
+                    </tr>
+                    <tr>
+                        <td>Blending Factor 2</td>
+                        <td>Constant Alpha</td>
+                    </tr>
+                    <tr>
+                        <td>Image Width</td>
+                        <td>480</td>
+                    </tr>
+                    <tr>
+                        <td>Image Height</td>
+                        <td>272</td>
+                    </tr>
+                </table>
+            </li>
+        </ol>
+
+        <div class="warning-box">
+            <strong>주의:</strong> Window Stop Position 값은 Start Position + Size - 1입니다.
+            <ul>
+                <li>Horizontal Stop = 0 + 480 - 1 = 479</li>
+                <li>Vertical Stop = 0 + 272 - 1 = 271</li>
+            </ul>
+        </div>
+
+        <h4>4.1.3 GPIO 핀 상세 확인</h4>
+
+        <p>Pinout view에서 다음 핀들이 올바르게 설정되었는지 확인:</p>
+
+        <table class="pin-table">
+            <tr>
+                <th>핀</th>
+                <th>기능</th>
+                <th>모드</th>
+                <th>Pull</th>
+                <th>Speed</th>
+            </tr>
+            <tr>
+                <td colspan="5" style="background-color: #e9ecef;"><strong>GPIOI - LTDC 신호</strong></td>
+            </tr>
+            <tr>
+                <td>PI0</td>
+                <td>LTDC_G5</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>PI1</td>
+                <td>LTDC_G6</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>PI9</td>
+                <td>LTDC_VSYNC</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>PI12</td>
+                <td>LED1 (또는 LTDC 신호)</td>
+                <td>GPIO_Output 또는 AF14</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>PI14</td>
+                <td>LTDC_CLK</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>PI15</td>
+                <td>LTDC_R0</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td colspan="5" style="background-color: #e9ecef;"><strong>GPIOJ - LTDC 데이터</strong></td>
+            </tr>
+            <tr>
+                <td>PJ0</td>
+                <td>LTDC_R1</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>PJ1</td>
+                <td>LTDC_R2</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>PJ3-PJ15</td>
+                <td>LTDC_Rx, Gx, Bx</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td colspan="5" style="background-color: #e9ecef;"><strong>GPIOK - LTDC 데이터</strong></td>
+            </tr>
+            <tr>
+                <td>PK2-PK7</td>
+                <td>LTDC_Bx, Gx</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td colspan="5" style="background-color: #e9ecef;"><strong>GPIOH - LTDC 제어</strong></td>
+            </tr>
+            <tr>
+                <td>PH9</td>
+                <td>LTDC_DE</td>
+                <td>AF14</td>
+                <td>No Pull</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td colspan="5" style="background-color: #e9ecef;"><strong>GPIOD - LCD 제어</strong></td>
+            </tr>
+            <tr>
+                <td>PD7</td>
+                <td>LCD_DISP (Enable)</td>
+                <td>GPIO_Output</td>
+                <td>No Pull</td>
+                <td>Low</td>
+            </tr>
+        </table>
+
+        <div class="tip-box">
+            <strong>팁:</strong> "Initialize all peripherals with default mode"를 Yes로 선택했다면 대부분의 핀이 자동으로 올바르게 설정됩니다.
+        </div>
+
+        <h3>4.2 Clock Configuration</h3>
+
+        <ol>
+            <li>
+                <span class="step-number">1</span>
+                <strong>Clock Configuration 탭 클릭</strong>
+            </li>
+            <li>
+                <span class="step-number">2</span>
+                <strong>Input frequency 설정</strong>
+                <ul>
+                    <li>HSE: <code>25 MHz</code></li>
+                </ul>
+            </li>
+            <li>
+                <span class="step-number">3</span>
+                <strong>PLL1 (System Clock) 설정</strong>
+                <table class="pin-table">
+                    <tr>
+                        <th>파라미터</th>
+                        <th>값</th>
+                    </tr>
+                    <tr>
+                        <td>Source</td>
+                        <td>HSE</td>
+                    </tr>
+                    <tr>
+                        <td>/M</td>
+                        <td>5</td>
+                    </tr>
+                    <tr>
+                        <td>×N</td>
+                        <td>160</td>
+                    </tr>
+                    <tr>
+                        <td>/P (SYSCLK)</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td>/Q</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>/R</td>
+                        <td>2</td>
+                    </tr>
+                </table>
+                <p>결과: SYSCLK = 25MHz / 5 × 160 / 2 = <strong>400MHz</strong></p>
+            </li>
+            <li>
+                <span class="step-number">4</span>
+                <strong>System Clock Mux</strong>
+                <ul>
+                    <li>System Clock Source: <code>PLL1</code></li>
+                </ul>
+            </li>
+            <li>
+                <span class="step-number">5</span>
+                <strong>Bus Clock Dividers</strong>
+                <table class="pin-table">
+                    <tr>
+                        <th>클럭</th>
+                        <th>Divider</th>
+                        <th>주파수</th>
+                    </tr>
+                    <tr>
+                        <td>AHB Prescaler (HCLK)</td>
+                        <td>2</td>
+                        <td>200 MHz</td>
+                    </tr>
+                    <tr>
+                        <td>APB1 Prescaler</td>
+                        <td>2</td>
+                        <td>100 MHz</td>
+                    </tr>
+                    <tr>
+                        <td>APB2 Prescaler</td>
+                        <td>2</td>
+                        <td>100 MHz</td>
+                    </tr>
+                    <tr>
+                        <td>APB3 Prescaler</td>
+                        <td>2</td>
+                        <td>100 MHz</td>
+                    </tr>
+                    <tr>
+                        <td>APB4 Prescaler</td>
+                        <td>2</td>
+                        <td>100 MHz</td>
+                    </tr>
+                </table>
+            </li>
+            <li>
+                <span class="step-number">6</span>
+                <strong>PLL3 (LTDC Clock) 설정</strong>
+                <table class="pin-table">
+                    <tr>
+                        <th>파라미터</th>
+                        <th>값</th>
+                    </tr>
+                    <tr>
+                        <td>PLL3 Source</td>
+                        <td>HSE</td>
+                    </tr>
+                    <tr>
+                        <td>/M</td>
+                        <td>5</td>
+                    </tr>
+                    <tr>
+                        <td>×N</td>
+                        <td>160</td>
+                    </tr>
+                    <tr>
+                        <td>/R (LTDC Clock)</td>
+                        <td>83</td>
+                    </tr>
+                </table>
+                <p>결과: LTDC CLK = 25MHz / 5 × 160 / 83 ≈ <strong>9.63MHz</strong></p>
+            </li>
+            <li>
+                <span class="step-number">7</span>
+                <strong>Peripheral Clock 설정</strong>
+                <ul>
+                    <li>LTDC Clock Mux: <code>PLL3_R</code></li>
+                </ul>
+            </li>
+        </ol>
+
+        <div class="tip-box">
+            <strong>자동 해결:</strong> 원하는 HCLK 값(예: 400MHz)을 입력 필드에 입력하고 Enter를 누른 후 <strong>"Resolve Clock Issues"</strong> 버튼을 클릭하면 CubeMX가 자동으로 최적의 PLL 값을 계산합니다.
+        </div>
+
+        <h3>4.3 Project Manager 설정</h3>
+
+        <ol>
+            <li>
+                <strong>Project Manager 탭 클릭</strong>
+            </li>
+            <li>
+                <strong>Project 섹션:</strong>
+                <ul>
+                    <li>Project Name: <code>LTDC_Display_CubeMX</code></li>
+                    <li>Project Location: 확인</li>
+                    <li>Toolchain/IDE: <code>STM32CubeIDE</code></li>
+                </ul>
+            </li>
+            <li>
+                <strong>Code Generator 섹션:</strong>
+                <ul>
+                    <li>✓ Generate peripheral initialization as a pair of '.c/.h' files per peripheral</li>
+                    <li>✓ Delete previously generated files when not re-generated</li>
+                    <li>✓ Set all free pins as analog (to reduce power consumption)</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Advanced Settings 탭:</strong>
+                <ul>
+                    <li>CM7 설정:
+                        <ul>
+                            <li>Driver Selector: 모두 HAL</li>
+                            <li>Register Callbacks: Disable (기본값)</li>
+                        </ul>
+                    </li>
+                    <li>CM4 설정: 동일</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h3>4.4 듀얼 코어 설정 확인</h3>
+
+        <div class="info-box">
+            <strong>CM7 (Cortex-M7):</strong> 메인 프로세서로 LTDC 제어 및 디스플레이 담당
+            <br>
+            <strong>CM4 (Cortex-M4):</strong> 대기 모드로 시작, 필요시 다른 작업 수행 가능
+        </div>
+
+        <p>듀얼 코어 프로젝트이므로 두 코어의 역할을 명확히 합니다:</p>
+        <ul>
+            <li><strong>CM7</strong>: LTDC 초기화, 이미지 표시, LED 제어</li>
+            <li><strong>CM4</strong>: HSEM으로 동기화 후 대기 (향후 확장 가능)</li>
+        </ul>
+    </div>
+
+    <div class="section" id="code-generation">
+        <h2>5. 코드 생성</h2>
+
+        <h3>5.1 코드 생성 실행</h3>
+        <ol>
+            <li>
+                <strong>메뉴에서 Project → Generate Code</strong> 선택
+                <br>또는
+            </li>
+            <li>
+                <strong>단축키 사용:</strong>
+                <ul>
+                    <li>macOS: <code>Option + K</code></li>
+                    <li>Windows/Linux: <code>Alt + K</code></li>
+                </ul>
+            </li>
+            <li>
+                <strong>코드 생성 대기</strong>
+                <ul>
+                    <li>Console 창에서 진행 상황 확인</li>
+                    <li>"Code generated successfully" 메시지 확인</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h3>5.2 생성된 프로젝트 구조 확인</h3>
+
+        <div class="code-box">
+LTDC_Display_CubeMX/
+├── CM4/
+│   ├── Core/
+│   │   ├── Inc/
+│   │   │   ├── main.h
+│   │   │   ├── stm32h7xx_hal_conf.h
+│   │   │   └── stm32h7xx_it.h
+│   │   ├── Src/
+│   │   │   ├── main.c                    ← CM4 메인 코드
+│   │   │   ├── stm32h7xx_hal_msp.c
+│   │   │   ├── stm32h7xx_it.c
+│   │   │   └── syscalls.c
+│   │   └── Startup/
+│   │       └── startup_stm32h745xihx.s
+│   └── Drivers/
+│       ├── STM32H7xx_HAL_Driver/
+│       ├── CMSIS/
+│       └── BSP/                          ← 보드 지원 패키지
+├── CM7/
+│   ├── Core/
+│   │   ├── Inc/
+│   │   │   ├── main.h
+│   │   │   ├── stm32h7xx_hal_conf.h
+│   │   │   └── stm32h7xx_it.h
+│   │   ├── Src/
+│   │   │   ├── main.c                    ← CM7 메인 코드 (LTDC)
+│   │   │   ├── stm32h7xx_hal_msp.c
+│   │   │   ├── stm32h7xx_it.c
+│   │   │   └── syscalls.c
+│   │   └── Startup/
+│   │       └── startup_stm32h745xihx.s
+│   └── Drivers/ (CM4와 공유)
+├── Common/
+│   └── Src/
+│       └── system_stm32h7xx.c
+├── .cproject
+├── .project
+└── LTDC_Display_CubeMX.ioc              ← CubeMX 설정 파일
+        </div>
+
+        <h3>5.3 생성된 초기화 코드 확인</h3>
+
+        <p><strong>CM7/Core/Src/main.c</strong> 파일에서 자동 생성된 주요 함수:</p>
+
+        <div class="code-box">
+/* Private variables */
+LTDC_HandleTypeDef hltdc;               ← LTDC 핸들
+
+/* Private function prototypes */
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_LTDC_Init(void);         ← LTDC 초기화 함수
+
+int main(void)
+{
+  HAL_Init();
+  SystemClock_Config();                 ← 클럭 설정
+  MX_GPIO_Init();                       ← GPIO 초기화
+  MX_LTDC_Init();                       ← LTDC 초기화
+
+  while (1)
+  {
+    // 메인 루프
+  }
+}
+        </div>
+
+        <div class="tip-box">
+            <strong>확인 사항:</strong>
+            <ul>
+                <li>MX_LTDC_Init() 함수가 생성되었는지 확인</li>
+                <li>hltdc 핸들이 선언되었는지 확인</li>
+                <li>SystemClock_Config()에 PLL3 설정이 포함되었는지 확인</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section" id="code-migration">
+        <h2>6. 애플리케이션 코드 포팅</h2>
+
+        <p>이제 원본 LTDC_Display_1Layer 프로젝트의 애플리케이션 로직을 새 프로젝트로 이식합니다.</p>
+
+        <h3>6.1 이미지 파일 복사</h3>
+
+        <ol>
+            <li>
+                <strong>RGB565_480x272.h 파일 복사</strong>
+                <div class="code-box">
+소스: LTDC_Display_1Layer/CM7/Inc/RGB565_480x272.h
+대상: LTDC_Display_CubeMX/CM7/Core/Inc/RGB565_480x272.h
+                </div>
+            </li>
+            <li>
+                Finder 또는 터미널에서 파일 복사 후 프로젝트 새로고침 (F5)
+            </li>
+        </ol>
+
+        <h3>6.2 CM7 main.c 수정</h3>
+
+        <p><strong>파일: CM7/Core/Src/main.c</strong></p>
+
+        <h4>6.2.1 Include 추가</h4>
+        <div class="code-box">
+/* USER CODE BEGIN Includes */
+#include "RGB565_480x272.h"
+/* USER CODE END Includes */
+        </div>
+
+        <h4>6.2.2 Private 함수 프로토타입 추가</h4>
+        <div class="code-box">
+/* USER CODE BEGIN PFP */
+static void MPU_Config(void);
+static void CPU_CACHE_Enable(void);
+static void LCD_Config(void);
+/* USER CODE END PFP */
+        </div>
+
+        <h4>6.2.3 MPU_Config 함수 구현</h4>
+        <div class="code-box">
+/* USER CODE BEGIN 0 */
+/**
+  * @brief  Configure the MPU attributes
+  * @param  None
+  * @retval None
+  */
+static void MPU_Config(void)
+{
+  MPU_Region_InitTypeDef MPU_InitStruct;
+
+  /* Disable the MPU */
+  HAL_MPU_Disable();
+
+  /* Configure the MPU as Strongly ordered for not defined regions */
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.BaseAddress = 0x00;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_4GB;
+  MPU_InitStruct.AccessPermission = MPU_REGION_NO_ACCESS;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+  MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
+  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+  MPU_InitStruct.SubRegionDisable = 0x87;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  /* Enable the MPU */
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+}
+
+/**
+  * @brief  CPU L1-Cache enable
+  * @param  None
+  * @retval None
+  */
+static void CPU_CACHE_Enable(void)
+{
+  /* Enable I-Cache */
+  SCB_EnableICache();
+
+  /* Enable D-Cache */
+  SCB_EnableDCache();
+}
+/* USER CODE END 0 */
+        </div>
+
+        <h4>6.2.4 LCD_Config 함수 구현</h4>
+        <div class="code-box">
+/* USER CODE BEGIN 4 */
+/**
+  * @brief  LCD Configuration
+  * @note   Configure the LTDC Layer 1 to display image from Flash
+  * @retval None
+  */
+static void LCD_Config(void)
+{
+  LTDC_LayerCfgTypeDef pLayerCfg;
+
+  /* Layer 1 Configuration */
+  pLayerCfg.WindowX0 = 0;
+  pLayerCfg.WindowX1 = 480;
+  pLayerCfg.WindowY0 = 0;
+  pLayerCfg.WindowY1 = 272;
+
+  /* Pixel Format configuration */
+  pLayerCfg.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
+
+  /* Start Address: frame buffer is located at Flash memory */
+  pLayerCfg.FBStartAdress = (uint32_t)&RGB565_480x272;
+
+  /* Alpha constant (255 == totally opaque) */
+  pLayerCfg.Alpha = 255;
+
+  /* Default Color configuration (configure A,R,G,B component values) */
+  pLayerCfg.Alpha0 = 0;
+  pLayerCfg.Backcolor.Blue = 0;
+  pLayerCfg.Backcolor.Green = 0;
+  pLayerCfg.Backcolor.Red = 0;
+
+  /* Configure blending factors */
+  pLayerCfg.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
+  pLayerCfg.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
+
+  /* Configure the number of lines and number of pixels per line */
+  pLayerCfg.ImageWidth = 480;
+  pLayerCfg.ImageHeight = 272;
+
+  /* Configure the Layer */
+  if(HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg, 1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+/* USER CODE END 4 */
+        </div>
+
+        <h4>6.2.5 main() 함수 수정</h4>
+        <div class="code-box">
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
+  /* Configure the MPU attributes */
+  MPU_Config();
+
+  /* Enable the CPU Cache */
+  CPU_CACHE_Enable();
+  /* USER CODE END 1 */
+
+  /* MCU Configuration */
+  HAL_Init();
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_LTDC_Init();
+
+  /* USER CODE BEGIN 2 */
+  /* Configure LED2 */
+  BSP_LED_Init(LED2);
+
+  /* Enable LCD Display */
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_7, GPIO_PIN_SET);
+
+  /* Configure LCD Layer */
+  LCD_Config();
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
+}
+        </div>
+
+        <h3>6.3 SystemClock_Config 확인 및 수정</h3>
+
+        <p>CubeMX에서 생성된 SystemClock_Config 함수에 PLL3 설정이 포함되어 있는지 확인:</p>
+
+        <div class="code-box">
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /* Supply configuration update enable */
+  HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
+
+  /* Configure the main internal regulator output voltage */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
+
+  /* Macro to configure the PLL clock source */
+  __HAL_RCC_PLL_PLLSOURCE_CONFIG(RCC_PLLSOURCE_HSE);
+
+  /* Initializes the RCC Oscillators */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 5;
+  RCC_OscInitStruct.PLL.PLLN = 160;
+  RCC_OscInitStruct.PLL.PLLP = 2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLR = 2;
+  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
+  RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
+  RCC_OscInitStruct.PLL.PLLFRACN = 0;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* Initializes the CPU, AHB and APB buses clocks */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
+                              |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
+  RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+        </div>
+
+        <div class="warning-box">
+            <strong>주의:</strong> MX_LTDC_Init() 함수 안에 PLL3 클럭 설정이 포함되어 있어야 합니다. CubeMX Clock Configuration에서 PLL3를 올바르게 설정했다면 자동으로 포함됩니다.
+        </div>
+
+        <h3>6.4 MX_LTDC_Init 함수 확인</h3>
+
+        <p>자동 생성된 <code>MX_LTDC_Init()</code> 함수에 PLL3 설정이 포함되어 있는지 확인:</p>
+
+        <div class="code-box">
+static void MX_LTDC_Init(void)
+{
+  /* USER CODE BEGIN LTDC_Init 0 */
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+
+  /* Configure LTDC clock */
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LTDC;
+  PeriphClkInitStruct.PLL3.PLL3M = 5;
+  PeriphClkInitStruct.PLL3.PLL3N = 160;
+  PeriphClkInitStruct.PLL3.PLL3P = 2;
+  PeriphClkInitStruct.PLL3.PLL3Q = 2;
+  PeriphClkInitStruct.PLL3.PLL3R = 83;
+  PeriphClkInitStruct.PLL3.PLL3RGE = RCC_PLL3VCIRANGE_2;
+  PeriphClkInitStruct.PLL3.PLL3VCOSEL = RCC_PLL3VCOWIDE;
+  PeriphClkInitStruct.PLL3.PLL3FRACN = 0;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE END LTDC_Init 0 */
+
+  LTDC_LayerCfgTypeDef pLayerCfg = {0};
+
+  /* USER CODE BEGIN LTDC_Init 1 */
+  /* USER CODE END LTDC_Init 1 */
+
+  hltdc.Instance = LTDC;
+  hltdc.Init.HSPolarity = LTDC_HSPOLARITY_AL;
+  hltdc.Init.VSPolarity = LTDC_VSPOLARITY_AL;
+  hltdc.Init.DEPolarity = LTDC_DEPOLARITY_AL;
+  hltdc.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
+  hltdc.Init.HorizontalSync = 40;
+  hltdc.Init.VerticalSync = 9;
+  hltdc.Init.AccumulatedHBP = 53;
+  hltdc.Init.AccumulatedVBP = 11;
+  hltdc.Init.AccumulatedActiveW = 533;
+  hltdc.Init.AccumulatedActiveH = 283;
+  hltdc.Init.TotalWidth = 565;
+  hltdc.Init.TotalHeigh = 285;
+  hltdc.Init.Backcolor.Blue = 0;
+  hltdc.Init.Backcolor.Green = 0;
+  hltdc.Init.Backcolor.Red = 0;
+  if (HAL_LTDC_Init(&hltdc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* Layer 1 초기 설정은 CubeMX에서 생성되었지만,
+     프레임버퍼 주소는 LCD_Config()에서 설정 */
+
+  /* USER CODE BEGIN LTDC_Init 2 */
+  /* USER CODE END LTDC_Init 2 */
+}
+        </div>
+
+        <h3>6.5 CM4 main.c 수정</h3>
+
+        <p><strong>파일: CM4/Core/Src/main.c</strong></p>
+
+        <div class="code-box">
+/* USER CODE BEGIN PV */
+#define HSEM_ID_0 (0U) /* HW semaphore 0*/
+/* USER CODE END PV */
+
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
+  /* HW semaphore Clock enable */
+  __HAL_RCC_HSEM_CLK_ENABLE();
+
+  /* Activate HSEM notification for Cortex-M4 */
+  HAL_HSEM_ActivateNotification(__HAL_HSEM_SEMID_TO_MASK(HSEM_ID_0));
+
+  /* Domain D2 goes to STOP mode (Cortex-M4 in deep-sleep)
+     waiting for Cortex-M7 to perform system initialization */
+  HAL_PWREx_ClearPendingEvent();
+  HAL_PWREx_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFE, PWR_D2_DOMAIN);
+
+  /* Clear HSEM flag */
+  __HAL_HSEM_CLEAR_FLAG(__HAL_HSEM_SEMID_TO_MASK(HSEM_ID_0));
+  /* USER CODE END 1 */
+
+  /* MCU Configuration */
+  HAL_Init();
+
+  /* USER CODE BEGIN 2 */
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
+}
+        </div>
+
+        <h3>6.6 BSP (Board Support Package) 설정</h3>
+
+        <p>LED를 사용하려면 BSP 드라이버를 추가해야 합니다:</p>
+
+        <ol>
+            <li>
+                <strong>.ioc 파일 열기</strong>
+            </li>
+            <li>
+                <strong>Project Manager → Advanced Settings 탭</strong>
+            </li>
+            <li>
+                <strong>Generated Function Calls 섹션에서:</strong>
+                <ul>
+                    <li>"Do Not Generate Function Call" 체크 해제 (필요한 경우)</li>
+                </ul>
+            </li>
+            <li>
+                <strong>또는 수동으로 main.h에 추가:</strong>
+                <div class="code-box">
+/* USER CODE BEGIN Includes */
+#include "stm32h745i_discovery.h"
+#include "stm32h745i_discovery_lcd.h"
+/* USER CODE END Includes */
+                </div>
+            </li>
+        </ol>
+
+        <div class="warning-box">
+            <strong>주의:</strong> BSP 파일이 프로젝트에 포함되지 않은 경우, STM32CubeH7 펌웨어 패키지의 BSP 폴더에서 수동으로 복사해야 할 수 있습니다.
+        </div>
+    </div>
+
+    <div class="section" id="build-test">
+        <h2>7. 빌드 및 테스트</h2>
+
+        <h3>7.1 프로젝트 빌드</h3>
+
+        <ol>
+            <li>
+                <strong>Project Explorer에서 프로젝트 우클릭</strong>
+            </li>
+            <li>
+                <strong>Build Project 선택</strong> (또는 Cmd+B)
+            </li>
+            <li>
+                <strong>빌드 결과 확인:</strong>
+                <div class="code-box">
+Building target: LTDC_Display_CubeMX_CM7.elf
+Finished building target: LTDC_Display_CubeMX_CM7.elf
+
+arm-none-eabi-size  LTDC_Display_CubeMX_CM7.elf
+   text    data     bss     dec     hex filename
+  15234    1024    2048   18306    477e LTDC_Display_CubeMX_CM7.elf
+
+Build Finished. 0 errors, 0 warnings.
+                </div>
+            </li>
+            <li>
+                <strong>CM4도 동일하게 빌드</strong>
+            </li>
+        </ol>
+
+        <h3>7.2 디버그 구성</h3>
+
+        <ol>
+            <li>
+                <strong>Run → Debug Configurations</strong>
+            </li>
+            <li>
+                <strong>STM32 Cortex-M C/C++ Application 더블클릭</strong>
+            </li>
+            <li>
+                <strong>CM7 디버그 설정:</strong>
+                <ul>
+                    <li>Name: LTDC_Display_CubeMX_CM7 Debug</li>
+                    <li>C/C++ Application: CM7/Debug/LTDC_Display_CubeMX_CM7.elf</li>
+                    <li>Build configuration: Debug</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Debugger 탭:</strong>
+                <ul>
+                    <li>Debug probe: ST-LINK (ST-LINK GDB server)</li>
+                    <li>Interface: SWD</li>
+                    <li>Frequency: 4000 kHz</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Apply → Debug</strong>
+            </li>
+        </ol>
+
+        <h3>7.3 보드에 다운로드 및 실행</h3>
+
+        <ol>
+            <li>
+                <strong>STM32H745I-DISCO 보드를 USB로 연결</strong>
+            </li>
+            <li>
+                <strong>CM7 프로젝트를 먼저 다운로드</strong>
+                <ul>
+                    <li>Run → Run Configurations</li>
+                    <li>또는 F11 (Debug)</li>
+                </ul>
+            </li>
+            <li>
+                <strong>CM4 프로젝트 다운로드</strong> (필요시)
+            </li>
+            <li>
+                <strong>보드 리셋</strong>
+            </li>
+            <li>
+                <strong>LCD에 이미지 표시 확인</strong>
+            </li>
+        </ol>
+
+        <h3>7.4 예상 결과</h3>
+
+        <div class="tip-box">
+            <strong>정상 동작 시:</strong>
+            <ul>
+                <li>LCD에 RGB565_480x272.h의 이미지가 표시됨</li>
+                <li>LED2가 켜지지 않음 (오류 없음)</li>
+                <li>480x272 해상도로 선명한 이미지 출력</li>
+            </ul>
+        </div>
+
+        <div class="warning-box">
+            <strong>오류 발생 시:</strong>
+            <ul>
+                <li>LED2가 켜짐 → LTDC 초기화 오류</li>
+                <li>화면이 표시되지 않음 → 클럭 또는 타이밍 설정 확인</li>
+                <li>화면이 깨짐 → 픽셀 포맷 또는 프레임버퍼 주소 확인</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section" id="troubleshooting">
+        <h2>8. 문제 해결</h2>
+
+        <h3>8.1 일반적인 문제</h3>
+
+        <table>
+            <tr>
+                <th>증상</th>
+                <th>원인</th>
+                <th>해결 방법</th>
+            </tr>
+            <tr>
+                <td>화면에 아무것도 표시되지 않음</td>
+                <td>LCD_DISP 핀 미설정</td>
+                <td>PD7을 HIGH로 설정했는지 확인<br>
+                    <code>HAL_GPIO_WritePin(GPIOD, GPIO_PIN_7, GPIO_PIN_SET);</code>
+                </td>
+            </tr>
+            <tr>
+                <td>화면이 깨져서 표시됨</td>
+                <td>타이밍 파라미터 오류</td>
+                <td>LTDC 타이밍 설정 재확인<br>
+                    특히 Accumulated 값들 검증
+                </td>
+            </tr>
+            <tr>
+                <td>색상이 이상함</td>
+                <td>픽셀 포맷 불일치</td>
+                <td>LTDC Layer 픽셀 포맷: RGB565 확인<br>
+                    이미지 데이터 포맷 일치 확인
+                </td>
+            </tr>
+            <tr>
+                <td>LED2가 켜짐 (오류)</td>
+                <td>LTDC 초기화 실패</td>
+                <td>1. 클럭 설정 확인 (PLL3)<br>
+                    2. GPIO 핀 설정 확인<br>
+                    3. 디버거로 오류 위치 추적
+                </td>
+            </tr>
+            <tr>
+                <td>빌드 오류: RGB565_480x272 undefined</td>
+                <td>이미지 헤더 파일 미포함</td>
+                <td>RGB565_480x272.h 파일을 CM7/Core/Inc/에 복사<br>
+                    main.c에 #include 추가 확인
+                </td>
+            </tr>
+            <tr>
+                <td>BSP 함수 undefined reference</td>
+                <td>BSP 드라이버 미포함</td>
+                <td>프로젝트에 BSP 소스 파일 추가<br>
+                    또는 BSP 함수 대신 HAL 직접 사용
+                </td>
+            </tr>
+        </table>
+
+        <h3>8.2 CubeMX 설정 확인 체크리스트</h3>
+
+        <div class="config-item">
+            <strong>□ RCC:</strong>
+            <ul>
+                <li>□ HSE: Crystal/Ceramic Resonator</li>
+                <li>□ PLL1: M=5, N=160, P=2</li>
+                <li>□ PLL3: M=5, N=160, R=83</li>
+                <li>□ SYSCLK: 400MHz</li>
+                <li>□ HCLK: 200MHz</li>
+            </ul>
+        </div>
+
+        <div class="config-item">
+            <strong>□ LTDC:</strong>
+            <ul>
+                <li>□ Display1 활성화</li>
+                <li>□ Layer 1 활성화 (Layer 0 비활성화)</li>
+                <li>□ Horizontal Sync: 40</li>
+                <li>□ Vertical Sync: 9</li>
+                <li>□ Accumulated HBP: 53</li>
+                <li>□ Accumulated VBP: 11</li>
+                <li>□ Accumulated Active W: 533</li>
+                <li>□ Accumulated Active H: 283</li>
+                <li>□ Total Width: 565</li>
+                <li>□ Total Height: 285</li>
+                <li>□ 픽셀 포맷: RGB565</li>
+            </ul>
+        </div>
+
+        <div class="config-item">
+            <strong>□ GPIO:</strong>
+            <ul>
+                <li>□ LTDC 핀: GPIOI, J, K, H (AF14)</li>
+                <li>□ LCD_DISP: PD7 (GPIO_Output)</li>
+                <li>□ LED2: PI13 (GPIO_Output, optional)</li>
+            </ul>
+        </div>
+
+        <h3>8.3 디버깅 팁</h3>
+
+        <ol>
+            <li>
+                <strong>하드웨어 확인:</strong>
+                <ul>
+                    <li>LCD 케이블 연결 확인</li>
+                    <li>보드 전원 확인</li>
+                    <li>ST-LINK 연결 확인</li>
+                </ul>
+            </li>
+            <li>
+                <strong>소프트웨어 확인:</strong>
+                <ul>
+                    <li>HAL_LTDC_Init() 반환 값 확인</li>
+                    <li>HAL_LTDC_ConfigLayer() 반환 값 확인</li>
+                    <li>Error_Handler() 호출 여부 확인</li>
+                </ul>
+            </li>
+            <li>
+                <strong>메모리 확인:</strong>
+                <ul>
+                    <li>RGB565_480x272 배열 주소 확인 (Memory Browser)</li>
+                    <li>프레임버퍼 주소가 유효한지 확인</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h3>8.4 코드 생성 문제</h3>
+
+        <div class="warning-box">
+            <strong>CM4/CM7 폴더가 생성되지 않은 경우:</strong>
+            <ol>
+                <li>.ioc 파일 열기</li>
+                <li>Project Manager → Project 확인:
+                    <ul>
+                        <li>Toolchain/IDE: STM32CubeIDE</li>
+                    </ul>
+                </li>
+                <li>Project → Generate Code (Alt+K / Option+K)</li>
+                <li>"Initialize all peripherals?" → Yes 선택</li>
+                <li>Project Explorer에서 F5 (Refresh)</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>9. 요약 및 다음 단계</h2>
+
+        <h3>9.1 마이그레이션 요약</h3>
+        <p>이 가이드를 통해 다음을 완료했습니다:</p>
+        <ul>
+            <li>✓ .ioc 파일 기반의 새로운 STM32CubeIDE 프로젝트 생성</li>
+            <li>✓ STM32CubeMX를 통한 LTDC 및 주변장치 설정</li>
+            <li>✓ 원본 프로젝트의 애플리케이션 로직 포팅</li>
+            <li>✓ 듀얼 코어 (CM7/CM4) 구성</li>
+            <li>✓ LCD 디스플레이 기능 구현</li>
+        </ul>
+
+        <h3>9.2 .ioc 파일의 장점</h3>
+        <div class="tip-box">
+            <ul>
+                <li><strong>시각적 설정:</strong> GUI로 주변장치 설정 가능</li>
+                <li><strong>자동 코드 생성:</strong> 초기화 코드 자동 생성</li>
+                <li><strong>충돌 검사:</strong> 핀/리소스 충돌 자동 감지</li>
+                <li><strong>유지보수 용이:</strong> 설정 변경 시 쉽게 재생성</li>
+                <li><strong>문서화:</strong> .ioc 파일 자체가 하드웨어 설정 문서 역할</li>
+            </ul>
+        </div>
+
+        <h3>9.3 다음 단계</h3>
+        <ol>
+            <li>
+                <strong>기능 확장:</strong>
+                <ul>
+                    <li>터치 스크린 입력 추가 (FT5336 터치 컨트롤러)</li>
+                    <li>그래픽 라이브러리 통합 (TouchGFX)</li>
+                    <li>다중 레이어 활용</li>
+                    <li>애니메이션 및 GUI 구현</li>
+                </ul>
+            </li>
+            <li>
+                <strong>성능 최적화:</strong>
+                <ul>
+                    <li>DMA2D 활용 (그래픽 가속)</li>
+                    <li>SDRAM 사용 (프레임버퍼)</li>
+                    <li>더블 버퍼링 구현</li>
+                </ul>
+            </li>
+            <li>
+                <strong>CM4 활용:</strong>
+                <ul>
+                    <li>백그라운드 작업 처리</li>
+                    <li>센서 데이터 수집</li>
+                    <li>통신 처리</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>부록: 빠른 참조</h2>
+
+        <h3>A. 주요 함수 호출 순서</h3>
+        <div class="code-box">
+main()
+  ├─ MPU_Config()                    // 메모리 보호 설정
+  ├─ CPU_CACHE_Enable()               // 캐시 활성화
+  ├─ HAL_Init()                       // HAL 초기화
+  ├─ SystemClock_Config()             // 시스템 클럭 설정
+  ├─ MX_GPIO_Init()                   // GPIO 초기화
+  ├─ MX_LTDC_Init()                   // LTDC 초기화 (PLL3 설정 포함)
+  │   └─ HAL_RCCEx_PeriphCLKConfig()  // PLL3 클럭 설정
+  ├─ BSP_LED_Init(LED2)               // LED 초기화
+  ├─ HAL_GPIO_WritePin(GPIOD, 7, SET) // LCD 디스플레이 활성화
+  ├─ LCD_Config()                     // LCD 레이어 설정
+  │   └─ HAL_LTDC_ConfigLayer()       // Layer 1 프레임버퍼 설정
+  └─ while(1) { ... }                 // 메인 루프
+        </div>
+
+        <h3>B. 중요 레지스터 주소</h3>
+        <table class="pin-table">
+            <tr>
+                <th>리소스</th>
+                <th>주소</th>
+                <th>설명</th>
+            </tr>
+            <tr>
+                <td>LTDC</td>
+                <td>0x50001000</td>
+                <td>LCD-TFT 디스플레이 컨트롤러</td>
+            </tr>
+            <tr>
+                <td>GPIOD</td>
+                <td>0x58020C00</td>
+                <td>LCD_DISP 핀 (PD7)</td>
+            </tr>
+            <tr>
+                <td>GPIOI</td>
+                <td>0x58022000</td>
+                <td>LTDC 신호 핀</td>
+            </tr>
+            <tr>
+                <td>RCC</td>
+                <td>0x58024400</td>
+                <td>클럭 제어</td>
+            </tr>
+        </table>
+
+        <h3>C. 파일 위치</h3>
+        <table class="pin-table">
+            <tr>
+                <th>파일</th>
+                <th>위치</th>
+                <th>용도</th>
+            </tr>
+            <tr>
+                <td>main.c</td>
+                <td>CM7/Core/Src/</td>
+                <td>메인 애플리케이션 (CM7)</td>
+            </tr>
+            <tr>
+                <td>main.h</td>
+                <td>CM7/Core/Inc/</td>
+                <td>헤더 파일</td>
+            </tr>
+            <tr>
+                <td>RGB565_480x272.h</td>
+                <td>CM7/Core/Inc/</td>
+                <td>디스플레이 이미지</td>
+            </tr>
+            <tr>
+                <td>stm32h7xx_hal_msp.c</td>
+                <td>CM7/Core/Src/</td>
+                <td>MSP 초기화 (자동 생성)</td>
+            </tr>
+            <tr>
+                <td>프로젝트명.ioc</td>
+                <td>프로젝트 루트</td>
+                <td>CubeMX 설정 파일</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 5px;">
+            <p><strong>LTDC Display 프로젝트 마이그레이션 가이드</strong></p>
+            <p>STM32H745I-DISCO | STM32CubeMX | STM32CubeIDE</p>
+            <p>작성일: 2025년 11월</p>
+        </div>
+    </div>
+
+</body>
+</html>
