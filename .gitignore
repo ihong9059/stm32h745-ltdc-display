@@ -1,0 +1,28 @@
+# Build outputs
+*.o
+*.d
+*.su
+*.elf
+*.map
+*.list
+*.bin
+*.hex
+
+# Debug folders
+CM7/Debug/
+CM4/Debug/
+.settings/
+
+# IDE files
+.cproject
+.project
+.mxproject
+
+# Temporary files
+*.bak
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
